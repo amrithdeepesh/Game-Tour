@@ -6,7 +6,7 @@ type Game={game_id:string;name:string;category?:string};
 type Player={student_id:string;name:string;faction:string;game:string;points:number;wins:number;status:string};
 export default function Leaderboard(){
  const [games,setGames]=useState<Game[]>([]),[players,setPlayers]=useState<Player[]>([]),[selected,setSelected]=useState(""),[error,setError]=useState("");
- useEffect(()=>{fetch("http://localhost:8000/api/dashboard").then(r=>{if(!r.ok)throw Error();return r.json()}).then(d=>{setGames(d.games||[]);setPlayers(d.players||[]);setSelected(d.games?.[0]?.name||"")}).catch(()=>setError("Start the Python API to load live standings."))},[]);
+ useEffect(()=>{fetch("http://localhost:8000/api/dashboard").then(async r=>{const d=await r.json();if(!r.ok)throw Error(d.error||"Could not load live standings.");return d}).then(d=>{setGames(d.games||[]);setPlayers(d.players||[]);setSelected(d.games?.[0]?.name||"")}).catch(e=>setError(e instanceof Error?e.message:"Check MySQL and backend/.env settings."))},[]);
  const ranked=useMemo(()=>players.filter(p=>p.status==="Active"&&p.game===selected).sort((a,b)=>b.points-a.points||b.wins-a.wins||a.name.localeCompare(b.name)),[players,selected]);
  const podium=[ranked[1],ranked[0],ranked[2]];
  return <><PageTitle eyebrow="LIVE STANDINGS" title="Every point counts." description="Choose a game to see its top scorer and a live ranking of approved participants."/><div className="leaderboard-controls"><div><span className="eyebrow">SELECT A GAME</span><div className="game-tabs">{games.map(g=><button key={g.game_id} className={selected===g.name?"game-tab active":"game-tab"} onClick={()=>setSelected(g.name)}>{g.name}</button>)}</div></div><Tag tone="green"><i className="live-dot"/> Live leaderboard</Tag></div>

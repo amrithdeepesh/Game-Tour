@@ -1,20 +1,71 @@
 "use client";
 import Link from "next/link";
-import { useEffect,useState } from "react";
-import { ArrowRight,Medal,Plus,ShieldCheck,Sparkles,Trophy,Users } from "lucide-react";
-import { Card,PageTitle,SectionHeading,Tag } from "./components/ui";
-import { useRole } from "./components/role";
-type Game={game_id:string;name:string;category:string;venue:string;description:string;status:string};
+import {useEffect,useState} from "react";
+import {ArrowRight,CheckCircle2,ClipboardList,Gamepad2,Medal,Trophy,Users} from "lucide-react";
+import {Card,PageTitle,Tag} from "./components/ui";
+import {useRole} from "./components/role";
+
+type Game={game_id:string;name:string;category:string;venue:string};
 type Player={student_id:string;name:string;game:string;points:number;wins:number};
+
 export default function Overview(){
- const {role}=useRole();const [games,setGames]=useState<Game[]>([]);const [leaders,setLeaders]=useState<Player[]>([]);const [stats,setStats]=useState<any>({});
+ const {role}=useRole();
+ const [games,setGames]=useState<Game[]>([]);
+ const [leaders,setLeaders]=useState<Player[]>([]);
+ const [stats,setStats]=useState<Record<string,number>>({});
  const [selected,setSelected]=useState("");
- useEffect(()=>{fetch("http://localhost:8000/api/dashboard").then(r=>r.json()).then(d=>{setGames(d.games);setStats(d.stats);if(d.games?.[0])setSelected(d.games[0].name)})},[]);
- useEffect(()=>{if(!selected)return;fetch("http://localhost:8000/api/leaderboard?game="+encodeURIComponent(selected)).then(r=>r.json()).then(d=>setLeaders(d.players)).catch(()=>{})},[selected]);
- return <><PageTitle eyebrow={role==="admin"?"ADMIN WORKSPACE":"STUDENT WORKSPACE"} title={role==="admin"?"Run a smoother":"Find your"} accent={role==="admin"?"tournament.":"next game."} description={role==="admin"?"Manage games, confirm participation, and enter match scores from one place.":"Browse games, add your participation details, and follow your score by game."} action={role==="admin"?"Manage games":"Join a game"} href={role==="admin"?"/tournament":"/participants"}/>
- <section className="welcome-banner"><div className="welcome-icon">{role==="admin"?<ShieldCheck size={23}/>:<Sparkles size={23}/>}</div><div><Tag tone={role==="admin"?"violet":"green"}>{role==="admin"?"ADMIN MODE":"STUDENT MODE"}</Tag><h2>{role==="admin"?"Your tournament, clearly organized.":"Your next match starts here."}</h2><p>{role==="admin"?"Create a game, review the roster, then record a result.":"Pick a game and submit your details. Your standings update after results are entered."}</p></div><Link className="button primary-button" href={role==="admin"?"/tournament":"/participants"}>{role==="admin"?"Open admin tools":"Register"}<ArrowRight size={16}/></Link></section>
- <div className="stat-grid"><Card className="stat-card"><span className="stat-icon blue"><Trophy size={18}/></span><span className="stat-label">Games open</span><b className="stat-value">{games.length}</b><small className="stat-caption">Ready for entries</small></Card><Card className="stat-card"><span className="stat-icon green"><Users size={18}/></span><span className="stat-label">Participants</span><b className="stat-value">{stats.players||0}</b><small className="stat-caption">Registered students</small></Card><Card className="stat-card"><span className="stat-icon gold"><Medal size={18}/></span><span className="stat-label">Matches recorded</span><b className="stat-value">{stats.results||0}</b><small className="stat-caption">Scores posted</small></Card><Card className="stat-card"><span className="stat-icon violet"><Plus size={18}/></span><span className="stat-label">Pending entries</span><b className="stat-value">{stats.pending||0}</b><small className="stat-caption">Awaiting review</small></Card></div>
- <div className="two-column"><Card><SectionHeading label="GAME-BY-GAME STANDINGS" title="Top scorers" aside={<select className="inline-select" value={selected} onChange={e=>setSelected(e.target.value)}>{games.map(g=><option key={g.game_id}>{g.name}</option>)}</select>}/>{leaders.length>=2?<div className="podium-row">{leaders.slice(0,2).map((p,i)=><div className={"podium-card place-"+(i+1)} key={p.student_id}><div className="podium-place">{i===0?"1ST":"2ND"}</div><div className="podium-avatar">{p.name.split(" ").map(x=>x[0]).slice(0,2)}</div><b>{p.name}</b><small>{p.student_id}</small><strong>{p.points.toLocaleString()} <span>pts</span></strong></div>)}</div>:<div className="empty-state">Scores will appear when active students are registered and results are recorded.</div>}<Link href="/leaderboard" className="text-link">View full {selected||"game"} leaderboard <ArrowRight size={14}/></Link></Card>
- <Card><SectionHeading label="OPEN FOR PARTICIPATION" title="Available games" aside={<Link href="/tournament" className="text-link compact-link">All games <ArrowRight size={13}/></Link>}/><div className="game-list">{games.slice(0,4).map(g=><Link href="/tournament" className="game-row" key={g.game_id}><span className="game-mark"><Trophy size={17}/></span><span className="game-info"><b>{g.name}</b><small>{g.category} · {g.venue}</small></span><Tag tone="green">{g.status}</Tag></Link>)}</div></Card></div>
- <div className="bottom-callout"><div><div className="eyebrow">DATA STRUCTURES IN ACTION</div><h2>Every phase supports the tournament flow.</h2><p>Explore linked lists, trees, search, sorting, and greedy scheduling with real examples.</p></div><Link href="/structures" className="button secondary-button">Explore DS phases <ArrowRight size={15}/></Link></div></>;
+ const [error,setError]=useState("");
+ const [loading,setLoading]=useState(true);
+
+ useEffect(()=>{
+  let active=true;
+  fetch("http://localhost:8000/api/dashboard")
+   .then(async r=>{const d=await r.json();if(!r.ok)throw Error(d.error||"Could not load dashboard.");return d})
+   .then(d=>{if(!active)return;setGames(d.games||[]);setStats(d.stats||{});setSelected(d.games?.[0]?.name||"");setLoading(false)})
+   .catch(e=>{if(!active)return;setError(e instanceof Error?e.message:"Could not connect to tournament data.");setLoading(false)});
+  return()=>{active=false};
+ },[]);
+
+ useEffect(()=>{
+  if(!selected)return;
+  let active=true;
+  fetch("http://localhost:8000/api/leaderboard?game="+encodeURIComponent(selected))
+   .then(async r=>{const d=await r.json();if(!r.ok)throw Error(d.error||"Could not load standings.");return d})
+   .then(d=>{if(active)setLeaders(d.players||[])})
+   .catch(e=>{if(active)setError(e instanceof Error?e.message:"Could not load standings.")});
+  return()=>{active=false};
+ },[selected]);
+
+ const tasks=role==="admin"
+  ? [
+    {icon:Gamepad2,title:"Set up games and scores",detail:"Publish games and record match results.",href:"/tournament",action:"Manage games"},
+    {icon:ClipboardList,title:"Review student entries",detail:"Approve participation requests.",href:"/participants",action:"Review requests"},
+  ]
+  : [
+    {icon:ClipboardList,title:"Join a tournament game",detail:"Choose a game and submit your details.",href:"/participants",action:"Add participation"},
+    {icon:Medal,title:"Check the standings",detail:"See the top scorers in each game.",href:"/leaderboard",action:"Open leaderboard"},
+  ];
+
+ return <div className="simple-dashboard">
+  <PageTitle eyebrow={role==="admin"?"ADMIN DASHBOARD":"STUDENT DASHBOARD"} title="Tournament overview" description={role==="admin"?"A clear view of games, entries, and results.":"Find a game, submit your entry, and follow the standings."}/>
+  {error&&<div className="dashboard-error" role="alert"><b>Data is not available</b><span>{error}</span><small>Check the MySQL setup and restart the Python API.</small></div>}
+  <div className="dashboard-metrics">
+   <Card className="dashboard-metric"><span className="metric-icon blue"><Trophy size={20}/></span><span className="metric-label">Games</span><b>{loading?"—":games.length}</b><small>Open for participation</small></Card>
+   <Card className="dashboard-metric"><span className="metric-icon green"><Users size={20}/></span><span className="metric-label">Active participants</span><b>{loading?"—":stats.players||0}</b><small>Approved and ready to play</small></Card>
+   <Card className="dashboard-metric"><span className="metric-icon gold">{role==="admin"?<ClipboardList size={20}/>:<CheckCircle2 size={20}/>}</span><span className="metric-label">{role==="admin"?"Requests to review":"Results posted"}</span><b>{loading?"—":role==="admin"?(stats.pending||0):(stats.results||0)}</b><small>{role==="admin"?"Student entries waiting":"Match scores recorded"}</small></Card>
+  </div>
+  <div className="dashboard-columns">
+   <Card className="dashboard-panel"><div className="dashboard-panel-heading"><div><span className="eyebrow">QUICK ACTIONS</span><h2>{role==="admin"?"What needs doing?":"Your next steps"}</h2></div><Tag tone={role==="admin"?"violet":"green"}>{role==="admin"?"ADMIN":"STUDENT"}</Tag></div>
+    <div className="dashboard-task-list">{tasks.map(({icon:Icon,title,detail,href,action})=><Link className="dashboard-task" href={href} key={title}><span className="task-icon"><Icon size={19}/></span><span className="task-copy"><b>{title}</b><small>{detail}</small></span><span className="task-action">{action}<ArrowRight size={15}/></span></Link>)}</div>
+    <div className="dashboard-footer-link"><Link href="/structures">Explore the DS and algorithm phases <ArrowRight size={14}/></Link></div>
+   </Card>
+   <Card className="dashboard-panel dashboard-leaders"><div className="dashboard-panel-heading"><div><span className="eyebrow">LIVE STANDINGS</span><h2>Top scorers</h2></div><Link href="/leaderboard" className="plain-arrow" aria-label="View full leaderboard"><ArrowRight size={18}/></Link></div>
+    <label className="dashboard-game-select">Game<select value={selected} onChange={e=>setSelected(e.target.value)} disabled={!games.length}>{games.map(g=><option key={g.game_id} value={g.name}>{g.name}</option>)}</select></label>
+    <div className="dashboard-rank-list">{leaders.slice(0,3).map((player,index)=><div className="dashboard-rank" key={player.student_id}><span className={"dashboard-rank-number rank-color-"+index}>{index+1}</span><span className="dashboard-rank-name"><b>{player.name}</b><small>{player.wins} wins</small></span><strong>{player.points.toLocaleString()} <small>pts</small></strong></div>)}
+     {!loading&&!leaders.length&&<div className="dashboard-empty">Standings will appear when this game has active participants.</div>}
+    </div>
+    <Link href="/leaderboard" className="dashboard-full-link">View full leaderboard <ArrowRight size={15}/></Link>
+   </Card>
+  </div>
+ </div>;
 }
