@@ -1,0 +1,18 @@
+"use client";
+import {useEffect,useMemo,useState} from "react";
+import {Medal,Trophy,TrendingUp,Users} from "lucide-react";
+import {Card,PageTitle,SectionHeading,Tag} from "../components/ui";
+type Game={game_id:string;name:string;category?:string};
+type Player={student_id:string;name:string;faction:string;game:string;points:number;wins:number;status:string};
+export default function Leaderboard(){
+ const [games,setGames]=useState<Game[]>([]),[players,setPlayers]=useState<Player[]>([]),[selected,setSelected]=useState(""),[error,setError]=useState("");
+ useEffect(()=>{fetch("http://localhost:8000/api/dashboard").then(r=>{if(!r.ok)throw Error();return r.json()}).then(d=>{setGames(d.games||[]);setPlayers(d.players||[]);setSelected(d.games?.[0]?.name||"")}).catch(()=>setError("Start the Python API to load live standings."))},[]);
+ const ranked=useMemo(()=>players.filter(p=>p.status==="Active"&&p.game===selected).sort((a,b)=>b.points-a.points||b.wins-a.wins||a.name.localeCompare(b.name)),[players,selected]);
+ const podium=[ranked[1],ranked[0],ranked[2]];
+ return <><PageTitle eyebrow="LIVE STANDINGS" title="Every point counts." description="Choose a game to see its top scorer and a live ranking of approved participants."/><div className="leaderboard-controls"><div><span className="eyebrow">SELECT A GAME</span><div className="game-tabs">{games.map(g=><button key={g.game_id} className={selected===g.name?"game-tab active":"game-tab"} onClick={()=>setSelected(g.name)}>{g.name}</button>)}</div></div><Tag tone="green"><i className="live-dot"/> Live leaderboard</Tag></div>
+ {error&&<div className="notice">{error}</div>}
+ {selected&&<Card className="leaderboard-feature"><div className="leaderboard-feature-copy"><Tag tone="gold">{games.find(g=>g.name===selected)?.category||"TOURNAMENT"}</Tag><h2>{selected} leaderboard</h2><p>{ranked.length} approved {ranked.length===1?"participant":"participants"} · rankings update as admins enter match scores</p></div><div className="top-scorer"><span className="top-scorer-icon"><Trophy size={22}/></span><div><small>TOP SCORER</small><b>{ranked[0]?.name||"No scores yet"}</b><span>{ranked[0]?ranked[0].points.toLocaleString()+" points · "+ranked[0].wins+" wins":"Play a match to appear here"}</span></div></div></Card>}
+ {ranked.length>0&&<div className="podium-grid">{podium.map((p,i)=>{if(!p)return <div key={"empty-"+i}/>;const place=i===1?1:i===0?2:3;return <Card key={p.student_id} className={"podium-card place-"+place}><span className="podium-medal"><Medal size={20}/></span><span className="podium-place">{place===1?"1ST PLACE":place===2?"2ND PLACE":"3RD PLACE"}</span><h3>{p.name}</h3><p>{p.faction||"Participant"}</p><b className="podium-score">{p.points.toLocaleString()} <small>pts</small></b><span className="podium-wins">{p.wins} wins</span></Card>})}</div>}
+ <Card><SectionHeading label={selected||"TOURNAMENT"} title="Full standings" aside={<Tag><Users size={13}/>{ranked.length} ranked</Tag>}/><div className="table-scroll"><table className="leaderboard-table"><thead><tr><th>RANK</th><th>PARTICIPANT</th><th>TEAM</th><th>WINS</th><th className="right">SCORE</th></tr></thead><tbody>{ranked.map((p,i)=><tr key={p.student_id} className={i<2?"highlight-row":""}><td><span className={"rank-chip rank-"+(i+1)}>{i===0?"1st":i===1?"2nd":i+1}</span></td><td><b>{p.name}</b><small>{i===0?"Top scorer":p.student_id}</small></td><td>{p.faction||"—"}</td><td>{p.wins}</td><td className="right points">{p.points.toLocaleString()} pts</td></tr>)}</tbody></table></div>{!ranked.length&&!error&&<div className="empty-state"><TrendingUp size={24}/><p>No approved participants in this game yet.</p></div>}</Card>
+ </>;
+}
