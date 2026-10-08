@@ -73,6 +73,16 @@ class Handler(BaseHTTPRequestHandler):
                 return self.send_json({"method":method,"players":sorter(players,"points",True)})
             self.send_json({"error":"Not found"},404)
         except (ValueError,ZeroDivisionError) as exc: self.send_json({"error":str(exc)},400)
+    def do_DELETE(self):
+        parts=urlparse(self.path).path.rstrip("/").split("/")
+        if len(parts)==4 and parts[1:3]==["api","players"]:
+            student_id=parts[3]
+            for index,player in enumerate(players):
+                if player["student_id"]==student_id:
+                    removed=players.pop(index)
+                    return self.send_json({"deleted":removed})
+            return self.send_json({"error":"Participant not found"},404)
+        self.send_json({"error":"Not found"},404)
     def log_message(self, *_): pass
 if __name__=="__main__":
     print("Tournament API ready at http://localhost:8000")

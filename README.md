@@ -17,6 +17,8 @@ Requirements: Python 3.10+ and Node.js 20+.
 
 The backend uses only Python's standard library. Participant registrations are held in memory and reset when the API restarts. `backend/schema.sql` provides the planned MySQL schema; configure a MySQL connection and persistence layer before using this for durable or multi-user records.
 
+The responsive dashboard supports saved light and dark themes. The sidebar routes to separate Overview, Tournament, Participants, Data Structures, Algorithms, and Activity pages.
+
 ## Phase coverage
 
 - **Phase 1 — Linear structures:** linked-list participant insertion/traversal/deletion, linked-list-backed stack and queue, safe arithmetic expression evaluation.
@@ -30,6 +32,7 @@ The backend uses only Python's standard library. Participant registrations are h
 - `GET /api/dashboard`, `GET /api/players`
 - `GET /api/demo`
 - `POST /api/players` with `{"name":"Player"}`
+- `DELETE /api/players/{student_id}`
 - `POST /api/expression` with `{"expression":"1200 + 40 * 2"}`
 - `POST /api/greedy` with optional `{"matches":[...]}`
 - `POST /api/search` with `{"method":"linear|binary","query":"Mira Patel"}`
