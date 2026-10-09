@@ -1,60 +1,40 @@
-# Game Tour DS · Tournament & Live Leaderboard
+# Game Tour DS
 
-A Python API and Next.js dashboard for a game tournament, with interactive demonstrations aligned to the four data-structures-and-algorithms phases. Tournament games, student participation, schedules, scores, and match results are stored in MySQL.
+A responsive Next.js frontend and Python API for managing multiple game tournaments, student game choices, schedules, factions, leaderboards, and four data structures/algorithms learning phases.
 
-## First-time MySQL setup
+## MySQL setup
 
-1. Make sure the local MySQL server is running and create the `game_tour_ds` database. You can run `backend/schema.sql` in MySQL Workbench or the MySQL command-line client. The script only creates the app's prefixed `tournament_*` tables; it does not delete or alter the older unprefixed project tables.
-2. Create a MySQL account with access to `game_tour_ds`. The API needs permission to create/use its tables and to select, insert, update, and delete rows.
-3. Copy `backend/.env.example` to `backend/.env` and set your local connection values. Keep the password in that file and do not commit or share it:
-   ```text
-   DB_HOST=127.0.0.1
-   DB_PORT=3306
-   DB_NAME=game_tour_ds
-   DB_USER=your-local-mysql-user
-   DB_PASSWORD=your-local-mysql-password
-   ```
-4. Install the backend dependency once:
-   `cd C:\game_tour_ds\backend`
-   `venv\Scripts\python.exe -m pip install -r requirements.txt`
-   If using the system Python instead, run `python -m pip install -r requirements.txt`.
-
-The API creates any missing `tournament_*` tables at startup/first request and adds example games, players, and fixtures only when all four new `tournament_*` tables are empty. It never drops existing tables or reseeds non-empty data. If the MySQL settings are missing or invalid, API requests return an actionable error instead of silently falling back to volatile memory.
+1. Start MySQL and create a MySQL account that can create/use the `game_tour_ds` database and its tables. The app schema is created automatically on first API request; or run `backend/schema.sql` in Workbench.
+2. Copy `backend/.env.example` to `backend/.env`, then set your private DB_USER and DB_PASSWORD. Set ADMIN_USERNAME and a strong ADMIN_PASSWORD in that same local file to provision the single administrator account. Student registration cannot create admin accounts. Keep `.env` private and uncommitted.
+3. No tournaments, games, or other demo values are inserted. The tables begin empty. Students can register through the website.
 
 ## Run locally
 
-1. Start the API:
-   `cd C:\game_tour_ds\backend`
-   `venv\Scripts\python.exe app.py`
-2. In another terminal, start the frontend:
-   `cd C:\game_tour_ds\frontend`
-   `npm install`
-   `npm run dev`
-3. Open http://localhost:3000. The API listens at http://localhost:8000.
+Terminal 1:
+```powershell
+cd C:\game_tour_ds\backend
+venv\Scripts\python.exe app.py
+```
+Terminal 2:
+```powershell
+cd C:\game_tour_ds\frontend
+npm install
+npm run dev
+```
+Open http://localhost:3000. API: http://localhost:8000.
 
-## Dashboard and roles
+## Features
 
-The overview keeps to three quick counts, role-specific next steps, and a compact game leaderboard. The Admin/Student switch changes the demonstration views; it is not account authentication or a security boundary.
+- Student-only self-registration and authenticated student/admin pages.
+- Admin creates multiple tournaments, schedules games with date/time, rounds, venue and participant capacity.
+- Students submit 1–5 game choices once; the API refuses edits and enforces each game capacity.
+- Dashboard greeting, personalized schedule, overall participant leaderboard and faction leaderboard.
+- Dark theme, larger readable text, responsive navigation and empty states.
+- Data structure/algorithm learning pages remain in the navigation.
 
-- **Admin:** publish games, review and approve participation requests, record winners and both participants' scores.
-- **Student:** choose a game, submit participation details, and check the game-by-game leaderboard.
-- **Leaderboard:** shows each game's top scorer and highlights first and second place.
-- **Theme and layout:** saved light/dark theme, larger text, and responsive pages.
+## Data structures and algorithms phases
 
-## Phase coverage
-
-- **Phase 1 — Linear structures:** linked-list participant insertion/traversal/deletion, linked-list-backed stack and queue, safe arithmetic expression evaluation.
-- **Phase 2 — Hierarchical and graph:** binary search tree with inorder/preorder/postorder; arena adjacency graph with BFS and DFS.
-- **Phase 3 — Searching and sorting:** linear and binary search, selection and merge sort, efficiency comparison, integrated leaderboard workflow.
-- **Phase 4 — Problem solving:** greedy interval scheduling for non-overlapping matches, shown in the algorithm lab.
-
-## API
-
-- `GET /api/health`
-- `GET /api/dashboard`, `GET /api/players`
-- `GET /api/demo`
-- `GET /api/games`, `POST /api/games`
-- `POST /api/players`, `PATCH /api/players/{student_id}/status`, `DELETE /api/players/{student_id}`
-- `GET /api/leaderboard?game=Chess`
-- `GET /api/results`, `POST /api/results`
-- `POST /api/expression`, `POST /api/greedy`, `POST /api/search`, `POST /api/sort`
+Phase 1: linked list insertion/deletion/traversal, linked-list stack and queue, arithmetic expressions.
+Phase 2: binary tree traversals, binary search tree, graph representation, BFS and DFS.
+Phase 3: linear/binary search, merge/selection sorting, efficiency comparison, integrated workflow.
+Phase 4: greedy schedule selection integrated in the tournament workflow.

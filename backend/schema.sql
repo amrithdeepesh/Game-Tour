@@ -1,67 +1,9 @@
--- Safe, additive MySQL tables used by the tournament app.
--- Existing unprefixed project tables are left untouched.
-CREATE DATABASE IF NOT EXISTS game_tour_ds
-  CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+-- Creates an empty tournament database. No users, games, or sample values are inserted.
+CREATE DATABASE IF NOT EXISTS game_tour_ds CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 USE game_tour_ds;
-
-CREATE TABLE IF NOT EXISTS tournament_games (
-  id BIGINT NOT NULL AUTO_INCREMENT PRIMARY KEY,
-  game_id VARCHAR(20) NULL UNIQUE,
-  name VARCHAR(100) NOT NULL UNIQUE,
-  category VARCHAR(80) NOT NULL DEFAULT 'Other',
-  venue VARCHAR(120) NOT NULL DEFAULT 'Main Arena',
-  description VARCHAR(500) NOT NULL DEFAULT '',
-  status VARCHAR(20) NOT NULL DEFAULT 'Open',
-  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-
-CREATE TABLE IF NOT EXISTS tournament_participants (
-  id BIGINT NOT NULL AUTO_INCREMENT PRIMARY KEY,
-  student_id VARCHAR(20) NULL UNIQUE,
-  name VARCHAR(120) NOT NULL,
-  faction VARCHAR(100) NOT NULL DEFAULT '',
-  game_id VARCHAR(20) NOT NULL,
-  email VARCHAR(254) NOT NULL DEFAULT '',
-  notes TEXT NOT NULL,
-  points INT NOT NULL DEFAULT 0,
-  wins INT NOT NULL DEFAULT 0,
-  status ENUM('Pending','Active','Declined') NOT NULL DEFAULT 'Pending',
-  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  INDEX idx_tournament_players_game (game_id, status),
-  INDEX idx_tournament_players_rank (game_id, points DESC, wins DESC),
-  CONSTRAINT fk_tournament_participant_game FOREIGN KEY (game_id)
-    REFERENCES tournament_games(game_id)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-
-CREATE TABLE IF NOT EXISTS tournament_matches (
-  id BIGINT NOT NULL AUTO_INCREMENT PRIMARY KEY,
-  title VARCHAR(160) NOT NULL,
-  game_id VARCHAR(20) NOT NULL,
-  arena VARCHAR(120) NOT NULL,
-  starts_hour TINYINT UNSIGNED NOT NULL,
-  ends_hour TINYINT UNSIGNED NOT NULL,
-  status VARCHAR(20) NOT NULL DEFAULT 'Upcoming',
-  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  INDEX idx_tournament_schedule (game_id, starts_hour),
-  CONSTRAINT fk_tournament_match_game FOREIGN KEY (game_id)
-    REFERENCES tournament_games(game_id)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-
-CREATE TABLE IF NOT EXISTS tournament_results (
-  id BIGINT NOT NULL AUTO_INCREMENT PRIMARY KEY,
-  result_id VARCHAR(20) NULL UNIQUE,
-  game_id VARCHAR(20) NOT NULL,
-  match_title VARCHAR(160) NOT NULL,
-  winner_id VARCHAR(20) NOT NULL,
-  loser_id VARCHAR(20) NOT NULL,
-  winner_score INT NOT NULL,
-  loser_score INT NOT NULL,
-  played_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  INDEX idx_tournament_results_game (game_id, played_at),
-  CONSTRAINT fk_tournament_result_game FOREIGN KEY (game_id)
-    REFERENCES tournament_games(game_id),
-  CONSTRAINT fk_tournament_result_winner FOREIGN KEY (winner_id)
-    REFERENCES tournament_participants(student_id),
-  CONSTRAINT fk_tournament_result_loser FOREIGN KEY (loser_id)
-    REFERENCES tournament_participants(student_id)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+CREATE TABLE IF NOT EXISTS users(id BIGINT AUTO_INCREMENT PRIMARY KEY,username VARCHAR(40) NOT NULL UNIQUE,email VARCHAR(254) NOT NULL UNIQUE,display_name VARCHAR(120) NOT NULL,faction VARCHAR(80) NOT NULL,password_hash VARCHAR(256) NOT NULL,role ENUM('admin','student') NOT NULL DEFAULT 'student',created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP) ENGINE=InnoDB;
+CREATE TABLE IF NOT EXISTS tournaments(id BIGINT AUTO_INCREMENT PRIMARY KEY,name VARCHAR(120) NOT NULL,description VARCHAR(500) NOT NULL DEFAULT '',starts_at DATETIME NULL,ends_at DATETIME NULL,status ENUM('upcoming','active','completed') NOT NULL DEFAULT 'upcoming',created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP) ENGINE=InnoDB;
+CREATE TABLE IF NOT EXISTS games(id BIGINT AUTO_INCREMENT PRIMARY KEY,tournament_id BIGINT NOT NULL,name VARCHAR(100) NOT NULL,category VARCHAR(80) NOT NULL DEFAULT '',rounds INT NOT NULL DEFAULT 1,starts_at DATETIME NOT NULL,venue VARCHAR(160) NOT NULL,capacity INT NOT NULL,created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,INDEX(tournament_id,starts_at),CONSTRAINT fk_game_tournament FOREIGN KEY(tournament_id) REFERENCES tournaments(id)) ENGINE=InnoDB;
+CREATE TABLE IF NOT EXISTS game_choices(user_id BIGINT NOT NULL,game_id BIGINT NOT NULL,chosen_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,PRIMARY KEY(user_id,game_id),INDEX(game_id),CONSTRAINT fk_choice_user FOREIGN KEY(user_id) REFERENCES users(id),CONSTRAINT fk_choice_game FOREIGN KEY(game_id) REFERENCES games(id)) ENGINE=InnoDB;
+CREATE TABLE IF NOT EXISTS results(id BIGINT AUTO_INCREMENT PRIMARY KEY,game_id BIGINT NOT NULL,round_number INT NOT NULL,participant_id BIGINT NOT NULL,score INT NOT NULL DEFAULT 0,placement INT NULL,created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,INDEX(game_id,placement),CONSTRAINT fk_result_game FOREIGN KEY(game_id) REFERENCES games(id),CONSTRAINT fk_result_user FOREIGN KEY(participant_id) REFERENCES users(id)) ENGINE=InnoDB;
+CREATE TABLE IF NOT EXISTS sessions(token_hash CHAR(64) PRIMARY KEY,user_id BIGINT NOT NULL,expires_at DATETIME NOT NULL,CONSTRAINT fk_session_user FOREIGN KEY(user_id) REFERENCES users(id) ON DELETE CASCADE) ENGINE=InnoDB;
