@@ -1,5 +1,5 @@
 """Tournament API with role sessions and the four interactive DS/algorithm phases."""
-import hashlib,json,secrets
+import hashlib,json,secrets,ipaddress,socket
 from datetime import datetime,timedelta
 from http.server import BaseHTTPRequestHandler,ThreadingHTTPServer
 from urllib.parse import urlparse
@@ -8,6 +8,16 @@ from algorithms.expression_handler import evaluate_simple_expression
 from algorithms.problem_solver import schedule_maximum_matches
 from algorithms.search_sort import binary_search,linear_search,merge_sort,selection_sort
 from data_structures.tree import BinarySearchTree
+
+def _allowed_frontend_origin(origin):
+ try:
+  parsed=urlparse(origin or "")
+  if parsed.scheme!="http" or parsed.port!=3000 or not parsed.hostname:return False
+  host=parsed.hostname.lower().rstrip(".")
+  if host in ("localhost","127.0.0.1","::1",socket.gethostname().lower()):return True
+  address=ipaddress.ip_address(host)
+  return address.is_loopback or address.is_private
+ except (ValueError,TypeError):return False
 
 def password_hash(password):
  salt=secrets.token_bytes(16);return salt.hex()+":"+hashlib.pbkdf2_hmac("sha256",password.encode(),salt,240000).hex()
@@ -45,7 +55,7 @@ def phase_demo():
 class Handler(BaseHTTPRequestHandler):
  def send_json(self,data,status=200,extra=None):
   body=json.dumps(data,default=str).encode();self.send_response(status);self.send_header("Content-Type","application/json; charset=utf-8");origin=self.headers.get("Origin")
-  if origin in ("http://localhost:3000","http://127.0.0.1:3000"):self.send_header("Access-Control-Allow-Origin",origin);self.send_header("Access-Control-Allow-Credentials","true");self.send_header("Vary","Origin")
+  if _allowed_frontend_origin(origin):self.send_header("Access-Control-Allow-Origin",origin);self.send_header("Access-Control-Allow-Credentials","true");self.send_header("Vary","Origin")
   self.send_header("Access-Control-Allow-Headers","Content-Type");self.send_header("Access-Control-Allow-Methods","GET,POST,OPTIONS")
   for k,v in extra or []:self.send_header(k,v)
   self.send_header("Content-Length",str(len(body)));self.end_headers();self.wfile.write(body)
