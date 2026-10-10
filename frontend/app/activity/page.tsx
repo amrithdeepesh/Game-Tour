@@ -4,7 +4,7 @@ import { Activity, CheckCircle2, Clock3, Flag, Trophy } from "lucide-react";
 import { Card, PageTitle, SectionHeading, Tag } from "../components/ui";
 export default function ActivityPage(){
  const [data,setData]=useState<any>(null),[error,setError]=useState("");
- useEffect(()=>{fetch("http://localhost:8000/api/dashboard").then(r=>r.json()).then(setData).catch(()=>setError("Start the Python API to see current tournament activity."))},[]);
+ useEffect(()=>{fetch("/api/dashboard").then(r=>r.json()).then(setData).catch(()=>setError("Start the Python API to see current tournament activity."))},[]);
  const rows=data?.matches||[];
  return <><PageTitle eyebrow="TOURNAMENT PULSE" title="Activity" accent="from every arena." description="A live view of fixtures and the data structure events driving the tournament." action="Open match schedule" href="/tournament"/>{error&&<div className="notice">{error}</div>}
  <div className="stat-grid compact-stats"><Card className="stat-card"><span className="stat-icon blue"><Activity size={18}/></span><span className="stat-label">Tracked fixtures</span><b className="stat-value">{rows.length}</b><small className="stat-caption">Current schedule</small></Card><Card className="stat-card"><span className="stat-icon green"><CheckCircle2 size={18}/></span><span className="stat-label">API status</span><b className="stat-value">{data?"Online":"Loading"}</b><small className="stat-caption">Local Python service</small></Card><Card className="stat-card"><span className="stat-icon gold"><Flag size={18}/></span><span className="stat-label">Active rounds</span><b className="stat-value">{data?.stats?.matchesToday||0}</b><small className="stat-caption">Across all arenas</small></Card></div>
