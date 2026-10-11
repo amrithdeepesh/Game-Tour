@@ -2,6 +2,7 @@
 import os,threading,secrets,hashlib
 from pathlib import Path
 import mysql.connector
+from mysql.connector import errorcode
 _ready=False
 _lock=threading.Lock()
 def _env():
@@ -22,12 +23,19 @@ def init():
  if _ready:return
  with _lock:
   if _ready:return
-  c=connect(False);cur=c.cursor()
   try:
-   db=os.environ["DB_NAME"].replace("`","")
-   cur.execute(f"CREATE DATABASE IF NOT EXISTS `{db}` CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci");c.commit()
-  finally:cur.close();c.close()
-  c=connect()
+   c=connect()
+  except mysql.connector.Error as exc:
+   if exc.errno != errorcode.ER_BAD_DB_ERROR:
+    raise
+   bootstrap=connect(False);cur=bootstrap.cursor()
+   try:
+    db=os.environ["DB_NAME"].replace("`","")
+    cur.execute(f"CREATE DATABASE IF NOT EXISTS `{db}` CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci")
+    bootstrap.commit()
+   finally:
+    cur.close();bootstrap.close()
+   c=connect()
   schema=[
   """CREATE TABLE IF NOT EXISTS users(id BIGINT AUTO_INCREMENT PRIMARY KEY,username VARCHAR(40) NOT NULL UNIQUE,email VARCHAR(254) NOT NULL UNIQUE,display_name VARCHAR(120) NOT NULL,faction VARCHAR(80) NOT NULL,password_hash VARCHAR(256) NOT NULL,role ENUM('admin','student') NOT NULL DEFAULT 'student',created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP) ENGINE=InnoDB""",
   """CREATE TABLE IF NOT EXISTS tournaments(id BIGINT AUTO_INCREMENT PRIMARY KEY,name VARCHAR(120) NOT NULL,description VARCHAR(500) NOT NULL DEFAULT '',starts_at DATETIME NULL,ends_at DATETIME NULL,status ENUM('upcoming','active','completed') NOT NULL DEFAULT 'upcoming',created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP) ENGINE=InnoDB""",

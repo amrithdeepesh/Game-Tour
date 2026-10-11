@@ -1,5 +1,5 @@
-"""Tournament API with role sessions and the four interactive DS/algorithm phases."""
-import hashlib,json,secrets,ipaddress,socket
+"""Tournament API with role sessions and integrated operations algorithms."""
+import hashlib,json,secrets,ipaddress,socket,os
 from datetime import datetime,timedelta
 from http.server import BaseHTTPRequestHandler,ThreadingHTTPServer
 from urllib.parse import urlparse
@@ -8,6 +8,10 @@ from algorithms.expression_handler import evaluate_simple_expression
 from algorithms.problem_solver import schedule_maximum_matches
 from algorithms.search_sort import binary_search,linear_search,merge_sort,selection_sort
 from data_structures.tree import BinarySearchTree
+from data_structures.linked_list import LinkedList
+from data_structures.stack import Stack
+from data_structures.queue import Queue
+from data_structures.graph import Graph
 
 def _allowed_frontend_origin(origin):
  try:
@@ -36,21 +40,56 @@ def scheduled_rows(games):
   rows.append({"name":g["name"],"start":start,"end":start+max(1,int(g["rounds"]))*3600})
  return rows
 def phase_demo():
- entries=database.choices()
- linked=[{"student_id":"ST"+str(x["user_id"]),"name":x["display_name"],"game":x["game"]} for x in entries]
- players=player_rows();values=[p["points"] for p in players if p["points"]>0] or [20,40,60,80,100]
- tree=BinarySearchTree()
- for value in values:tree.insert(value)
- graph={"Arena":["Chess Hall","Court A","Table Tennis Hall"],"Chess Hall":["Arena","Court A"],"Court A":["Arena","Chess Hall","Table Tennis Hall"],"Table Tennis Hall":["Arena","Court A"]}
- def walk(start,depth=False):
-  seen=set();order=[];pending=[start]
-  while pending:
-   node=pending.pop() if depth else pending.pop(0)
-   if node in seen:continue
-   seen.add(node);order.append(node);neighbors=[n for n in graph[node] if n not in seen];pending.extend(reversed(neighbors) if depth else neighbors)
-  return order
- intervals=scheduled_rows(database.games())
- return {"linkedList":linked,"stackTop":"Match completed","stackActions":["Student registered","Game choice submitted","Score recorded"],"queueFront":"Next match check-in","queueItems":["Next match check-in","Following match check-in"],"tree":{"inorder":tree.inorder(),"preorder":tree.preorder(),"postorder":tree.postorder()},"graph":{"bfs":walk("Arena"),"dfs":walk("Arena",True)},"greedySchedule":schedule_maximum_matches(intervals)}
+ # The same data records used by registration and game choices are loaded into
+ # the linked-list demo, so the visualization is backed by the real structure.
+ linked = LinkedList()
+ for entry in database.choices():
+  linked.insert_at_end({
+   "student_id": "ST" + str(entry["user_id"]),
+   "name": entry["display_name"],
+   "game": entry["game"],
+  })
+
+ players = player_rows()
+ values = [player["points"] for player in players if player["points"] > 0] or [20, 40, 60, 80, 100]
+ tree = BinarySearchTree()
+ for value in values:
+  tree.insert(value)
+
+ action_stack = Stack()
+ for action in ("Student registered", "Game choice submitted", "Score recorded"):
+  action_stack.push(action)
+ check_in_queue = Queue()
+ for match in ("Next match check-in", "Following match check-in"):
+  check_in_queue.enqueue(match)
+
+ venues = Graph(("Arena", "Chess Hall", "Court A", "Table Tennis Hall"))
+ for first, second in (
+  ("Arena", "Chess Hall"),
+  ("Arena", "Court A"),
+  ("Arena", "Table Tennis Hall"),
+  ("Chess Hall", "Court A"),
+  ("Court A", "Table Tennis Hall"),
+ ):
+  venues.add_edge(first, second)
+
+ intervals = scheduled_rows(database.games())
+ return {
+  "linkedList": linked.traverse(),
+  "stackTop": action_stack.peek(),
+  "stackActions": action_stack.to_list(),
+  "queueFront": check_in_queue.peek(),
+  "queueItems": check_in_queue.to_list(),
+  "tree": {
+   "inorder": tree.inorder(),
+   "preorder": tree.preorder(),
+   "postorder": tree.postorder(),
+   "searchValue": values[-1],
+   "searchFound": tree.contains(values[-1]),
+  },
+  "graph": {"bfs": venues.bfs("Arena"), "dfs": venues.dfs("Arena")},
+  "greedySchedule": schedule_maximum_matches(intervals),
+}
 
 class Handler(BaseHTTPRequestHandler):
  def send_json(self,data,status=200,extra=None):
@@ -140,4 +179,8 @@ class Handler(BaseHTTPRequestHandler):
    return self.send_json({"error":"Not found"},404)
   except Exception as e:return self.error(e)
  def log_message(self,*_):pass
-if __name__=="__main__":print("Arena API listening on http://localhost:8000");ThreadingHTTPServer(("127.0.0.1",8000),Handler).serve_forever()
+if __name__ == "__main__":
+ host = os.getenv("API_HOST", "127.0.0.1")
+ port = int(os.getenv("API_PORT", "8000"))
+ print(f"Arena API listening on http://{host}:{port}")
+ ThreadingHTTPServer((host, port), Handler).serve_forever()

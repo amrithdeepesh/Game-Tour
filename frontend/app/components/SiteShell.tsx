@@ -1,21 +1,163 @@
 "use client";
+
 import Link from "next/link";
-import {useEffect,useState} from "react";
-import {usePathname,useRouter} from "next/navigation";
-import {BarChart3,BookOpen,Boxes,Command,LogOut,Moon,Sun,Trophy,Medal,Users,Flag} from "lucide-react";
-import {RoleContext,type User,type UserRole,API} from "./role";
-const studentNav=[{href:"/",label:"Dashboard",icon:BarChart3},{href:"/tournament",label:"Games & schedule",icon:Trophy},{href:"/participants",label:"My game choices",icon:Users},{href:"/leaderboard",label:"Participant leaderboard",icon:Medal},{href:"/faction-leaderboard",label:"Faction leaderboard",icon:Flag},{href:"/structures",label:"Phases 1–2",icon:Boxes},{href:"/algorithms",label:"Phases 3–4",icon:BookOpen}];
-const adminNav=[{href:"/",label:"Dashboard",icon:BarChart3},{href:"/tournament",label:"Tournaments & games",icon:Trophy},{href:"/participants",label:"Participants",icon:Users},{href:"/leaderboard",label:"Participant leaderboard",icon:Medal},{href:"/faction-leaderboard",label:"Faction leaderboard",icon:Flag},{href:"/structures",label:"Phases 1–2",icon:Boxes},{href:"/algorithms",label:"Phases 3–4",icon:BookOpen}];
-export default function SiteShell({children}:{children:React.ReactNode}){
- const path=usePathname(),router=useRouter();const [dark,setDark]=useState(true),[user,setUser]=useState<User|null>(null),[loading,setLoading]=useState(true);
- const publicPage=path==="/login"||path==="/register";
- async function refresh(){try{const r=await fetch(API+"/me",{credentials:"include"});const d=await r.json();setUser(d.user||null)}catch{setUser(null)}finally{setLoading(false)}}
- useEffect(()=>{const saved=localStorage.getItem("arena-theme");setDark(saved?saved==="dark":true);refresh()},[]);
- useEffect(()=>{document.documentElement.dataset.theme=dark?"dark":"light";localStorage.setItem("arena-theme",dark?"dark":"light")},[dark]);
- useEffect(()=>{if(!loading&&!publicPage&&!user)router.replace("/login");if(!loading&&publicPage&&user)router.replace("/")},[loading,user,path]);
- async function logout(){await fetch(API+"/logout",{method:"POST",credentials:"include"});setUser(null);router.replace("/login")}
- if(publicPage)return <RoleContext.Provider value={{role:user?.role||"student",user,loading,refresh,logout}}><main className="auth-page">{children}</main></RoleContext.Provider>;
- if(loading||!user)return <div className="auth-loading">Loading your workspace…</div>;
- const nav=user.role==="admin"?adminNav:studentNav,active=nav.find(n=>n.href==="/" ? path==="/" : path.startsWith(n.href));
- return <RoleContext.Provider value={{role:user.role,user,loading,refresh,logout}}><div className="app-shell"><aside className="sidebar"><Link href="/" className="brand"><span className="brand-mark"><Command size={19}/></span><span>arena<span className="brand-dot">.</span></span></Link><div className="workspace-switch"><span className="workspace-icon">GT</span><span><b>Game Tour DS</b><small>{user.role==="admin"?"Admin console":"Student workspace"}</small></span></div><div className="nav-label">WORKSPACE</div><nav className="side-nav">{nav.map(({href,label,icon:Icon})=><Link href={href} key={href} className={"nav-link "+(active?.href===href?"is-active":"")}><Icon size={18}/><span>{label}</span></Link>)}</nav><div className="sidebar-bottom"><div className="help-card"><div className="eyebrow">PROJECT PHASES</div><b>Learn while you play</b><p>Explore the data structures and algorithm demos.</p><Link href="/structures">Open learning lab →</Link></div><div className="profile"><span className="avatar">{user.name.slice(0,2).toUpperCase()}</span><span><b>{user.name}</b><small>{user.role==="admin"?"Administrator":user.faction+" · Student"}</small></span></div></div></aside><section className="main-area"><header className="topbar"><div className="breadcrumbs"><Link href="/">Game Tour DS</Link><span>/</span><b>{active?.label||"Workspace"}</b></div><div className="topbar-actions"><span className="role-pill">{user.role==="admin"?"ADMIN":"STUDENT"}</span><button className="theme-toggle" onClick={()=>setDark(v=>!v)}>{dark?<Sun size={17}/>:<Moon size={17}/>}<span>{dark?"Light":"Dark"}</span></button><button className="theme-toggle" onClick={logout} title="Sign out"><LogOut size={16}/><span>Sign out</span></button></div></header><main className="page-content">{children}</main></section></div></RoleContext.Provider>;
+import { useEffect, useState } from "react";
+import { usePathname, useRouter } from "next/navigation";
+import {
+  BarChart3,
+  BookOpen,
+  Boxes,
+  Command,
+  Flag,
+  LogOut,
+  Medal,
+  Moon,
+  Sun,
+  Trophy,
+  Users,
+} from "lucide-react";
+import { api, RoleContext, type User } from "./role";
+
+const studentNav = [
+  { href: "/", label: "Dashboard", icon: BarChart3 },
+  { href: "/tournament", label: "Games & schedule", icon: Trophy },
+  { href: "/participants", label: "My game choices", icon: Users },
+  { href: "/leaderboard", label: "Participant leaderboard", icon: Medal },
+  { href: "/faction-leaderboard", label: "Faction leaderboard", icon: Flag },
+  { href: "/structures", label: "Competition operations", icon: Boxes },
+  { href: "/algorithms", label: "Standings tools", icon: BookOpen },
+];
+
+const adminNav = [
+  { href: "/", label: "Dashboard", icon: BarChart3 },
+  { href: "/tournament", label: "Tournaments & games", icon: Trophy },
+  { href: "/participants", label: "Participants", icon: Users },
+  { href: "/leaderboard", label: "Participant leaderboard", icon: Medal },
+  { href: "/faction-leaderboard", label: "Faction leaderboard", icon: Flag },
+  { href: "/structures", label: "Competition operations", icon: Boxes },
+  { href: "/algorithms", label: "Standings tools", icon: BookOpen },
+];
+
+export default function SiteShell({ children }: { children: React.ReactNode }) {
+  const path = usePathname();
+  const router = useRouter();
+  const [dark, setDark] = useState(true);
+  const [user, setUser] = useState<User | null>(null);
+  const [loading, setLoading] = useState(true);
+  const publicPage = path === "/login" || path === "/register";
+
+  async function refresh() {
+    try {
+      const result = await api("/me");
+      setUser(result.user || null);
+    } catch {
+      setUser(null);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  useEffect(() => {
+    const saved = localStorage.getItem("arena-theme");
+    setDark(saved ? saved === "dark" : true);
+    void refresh();
+  }, []);
+
+  useEffect(() => {
+    document.documentElement.dataset.theme = dark ? "dark" : "light";
+    localStorage.setItem("arena-theme", dark ? "dark" : "light");
+  }, [dark]);
+
+  useEffect(() => {
+    if (!loading && !publicPage && !user) router.replace("/login");
+    if (!loading && publicPage && user) router.replace("/");
+  }, [loading, user, path]);
+
+  async function logout() {
+    await api("/logout", { method: "POST" });
+    setUser(null);
+    router.replace("/login");
+  }
+
+  if (publicPage) {
+    return (
+      <RoleContext.Provider value={{ role: user?.role || "student", user, loading, refresh, logout }}>
+        <main className="auth-page">{children}</main>
+      </RoleContext.Provider>
+    );
+  }
+
+  if (loading || !user) return <div className="auth-loading">Loading your workspace…</div>;
+
+  const nav = user.role === "admin" ? adminNav : studentNav;
+  const active = nav.find((item) => (item.href === "/" ? path === "/" : path.startsWith(item.href)));
+
+  return (
+    <RoleContext.Provider value={{ role: user.role, user, loading, refresh, logout }}>
+      <div className="app-shell">
+        <aside className="sidebar">
+          <Link href="/" className="brand">
+            <span className="brand-mark"><Command size={19} /></span>
+            <span>arena<span className="brand-dot">.</span></span>
+          </Link>
+          <div className="workspace-switch">
+            <span className="workspace-icon">GT</span>
+            <span>
+              <b>Game Tour DS</b>
+              <small>{user.role === "admin" ? "Admin console" : "Student workspace"}</small>
+            </span>
+          </div>
+          <div className="nav-label">WORKSPACE</div>
+          <nav className="side-nav">
+            {nav.map(({ href, label, icon: Icon }) => (
+              <Link
+                href={href}
+                key={href}
+                className={"nav-link " + (active?.href === href ? "is-active" : "")}
+              >
+                <Icon size={18} />
+                <span>{label}</span>
+              </Link>
+            ))}
+          </nav>
+          <div className="sidebar-bottom">
+            <div className="help-card">
+              <div className="eyebrow">TOURNAMENT TOOLS</div>
+              <b>Operations in action</b>
+              <p>See how rosters, standings, and schedules work.</p>
+              <Link href="/structures">Explore operations →</Link>
+            </div>
+            <div className="profile">
+              <span className="avatar">{user.name.slice(0, 2).toUpperCase()}</span>
+              <span>
+                <b>{user.name}</b>
+                <small>{user.role === "admin" ? "Administrator" : user.faction + " · Student"}</small>
+              </span>
+            </div>
+          </div>
+        </aside>
+        <section className="main-area">
+          <header className="topbar">
+            <div className="breadcrumbs">
+              <Link href="/">Game Tour DS</Link>
+              <span>/</span>
+              <b>{active?.label || "Workspace"}</b>
+            </div>
+            <div className="topbar-actions">
+              <span className="role-pill">{user.role === "admin" ? "ADMIN" : "STUDENT"}</span>
+              <button className="theme-toggle" onClick={() => setDark((value) => !value)}>
+                {dark ? <Sun size={17} /> : <Moon size={17} />}
+                <span>{dark ? "Light" : "Dark"}</span>
+              </button>
+              <button className="theme-toggle" onClick={logout} title="Sign out">
+                <LogOut size={16} />
+                <span>Sign out</span>
+              </button>
+            </div>
+          </header>
+          <main className="page-content">{children}</main>
+        </section>
+      </div>
+    </RoleContext.Provider>
+  );
 }

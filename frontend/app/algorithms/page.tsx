@@ -1,21 +1,218 @@
 "use client";
+
 import { useEffect, useState } from "react";
 import { ArrowDownWideNarrow, Binary, Search, Sparkles, Zap } from "lucide-react";
 import { Card, PageTitle, SectionHeading, Tag } from "../components/ui";
-type Player={student_id:string;name:string;points:number;game:string};
-type Match={name:string;start:number;end:number};
-export default function Algorithms(){
- const [players,setPlayers]=useState<Player[]>([]),[matches,setMatches]=useState<Match[]>([]),[query,setQuery]=useState("Mira Patel"),[searchMethod,setSearchMethod]=useState("linear"),[searchResult,setSearchResult]=useState(""),[sortMethod,setSortMethod]=useState("merge"),[sorted,setSorted]=useState<Player[]>([]),[schedule,setSchedule]=useState<Match[]>([]),[status,setStatus]=useState("");
- useEffect(()=>{fetch("/api/dashboard",{credentials:"include"}).then(r=>r.json()).then(d=>{setPlayers(d.players);setMatches(d.matches)}).catch(()=>setStatus("Start the Python API to run the interactive algorithms."))},[]);
- async function searchRun(method:string){setSearchMethod(method);try{const r=await fetch("/api/search",{method:"POST",headers:{"Content-Type":"application/json"},credentials:"include",body:JSON.stringify({method,query})});const d=await r.json();setSearchResult(d.player?"Found "+d.player.name+" with "+d.player.points+" points (index "+d.index+")":"No participant found.")}catch{setSearchResult("Search API is offline.")}}
- async function sortRun(method:string){setSortMethod(method);try{const r=await fetch("/api/sort",{method:"POST",headers:{"Content-Type":"application/json"},credentials:"include",body:JSON.stringify({method})});const d=await r.json();setSorted(d.players)}catch{setStatus("Sort API is offline.")}}
- async function runGreedy(){try{const r=await fetch("/api/greedy",{method:"POST",headers:{"Content-Type":"application/json"},credentials:"include",body:JSON.stringify({matches})});const d=await r.json();setSchedule(d.selected)}catch{setStatus("Scheduler API is offline.")}}
- return <><PageTitle eyebrow="PHASES 03 + 04" title="Find the signal." accent="Make the move." description="Search the roster, sort the leaderboard, and schedule more games with fewer conflicts." action="View structures" href="/structures"/>
- <div className="phase-heading"><span className="phase-badge phase-three">03</span><div><div className="eyebrow">SEARCHING + SORTING</div><h2>Turn the roster into answers</h2></div><Tag>Linear · Binary · Selection · Merge</Tag></div>
- <div className="two-column"><Card><SectionHeading title="Search participants" aside={<Tag tone="blue">O(n) / O(log n)</Tag>}/><p className="muted-copy">Linear search scans an unsorted roster. Binary search halves a name-sorted roster at every step.</p><div className="algorithm-input"><label className="search-field"><Search size={16}/><input value={query} onChange={e=>setQuery(e.target.value)} placeholder="Exact participant name"/></label><button className={"button "+(searchMethod==="linear"?"primary-button":"secondary-button")} onClick={()=>searchRun("linear")}>Linear search</button><button className={"button "+(searchMethod==="binary"?"primary-button":"secondary-button")} onClick={()=>searchRun("binary")}><Binary size={15}/> Binary search</button></div>{searchResult&&<div className="result-panel">{searchResult}</div>}<div className="complexity-compare"><div><b>Linear</b><span>Best O(1)</span><span>Worst O(n)</span><small>Any list order</small></div><div><b>Binary</b><span>Best O(1)</span><span>Worst O(log n)</span><small>Needs sorted input</small></div></div></Card>
- <Card><SectionHeading title="Sort the leaderboard" aside={<Tag tone="gold">1-2 METHODS</Tag>}/><p className="muted-copy">Compare a simple quadratic sort against merge sort, which scales better as the field grows.</p><div className="sort-controls"><button className={"button "+(sortMethod==="selection"?"primary-button":"secondary-button")} onClick={()=>sortRun("selection")}>Selection sort</button><button className={"button "+(sortMethod==="merge"?"primary-button":"secondary-button")} onClick={()=>sortRun("merge")}><ArrowDownWideNarrow size={15}/> Merge sort</button></div><div className="sort-bars">{(sorted.length?sorted:players).slice(0,8).map(p=><div key={p.student_id} title={p.name+" · "+p.points} style={{height:Math.max(22,p.points/16)+"px"}}><small>{p.points}</small></div>)}</div><div className="sort-labels"><span>{sortMethod==="merge"?"Merge sort · O(n log n)":"Selection sort · O(n²)"}</span><span>{sorted.length||players.length} competitors</span></div><div className="sorted-list">{(sorted.length?sorted:players).slice(0,4).map((p,i)=><span key={p.student_id}>{i+1}. {p.name} <b>{p.points}</b></span>)}</div></Card></div>
- <div className="phase-heading second-phase"><span className="phase-badge phase-four">04</span><div><div className="eyebrow">ALGORITHMIC PROBLEM SOLVING</div><h2>Pack the schedule, avoid collisions</h2></div><Tag tone="violet">GREEDY APPROACH</Tag></div>
- <Card className="greedy-card"><div className="greedy-head"><SectionHeading title="Maximum non-overlapping matches" aside={<Tag tone="green">INTERVAL SCHEDULING</Tag>}/><button className="button primary-button" onClick={runGreedy}><Sparkles size={15}/> Solve schedule</button></div><p className="muted-copy">Sort by earliest finish, then accept each match that starts when the last chosen one ends. This yields a maximum compatible set.</p><div className="greedy-grid">{matches.map(m=>{const chosen=schedule.some(s=>s.name===m.name);return <div className={"greedy-item "+(chosen?"is-chosen":"")} key={m.name}><span className="greedy-check">{chosen?"✓":"·"}</span><b>{m.name}</b><small>{new Date(m.start*1000).toLocaleTimeString([], {hour:"2-digit",minute:"2-digit"})} - {new Date(m.end*1000).toLocaleTimeString([], {hour:"2-digit",minute:"2-digit"})}</small><Tag tone={chosen?"green":"neutral"}>{schedule.length?(chosen?"Selected":"Skipped"):"Ready"}</Tag></div>})}</div><div className="algorithm-footnote"><Zap size={14}/> Greedy interval scheduling · O(n log n) · integrates with the tournament fixtures</div></Card>
- {status&&<div className="notice">{status}</div>}
- </>;
+import { api } from "../components/role";
+
+type Player = { student_id: string; name: string; points: number; game: string };
+type Match = { name: string; start: number; end: number };
+
+export default function Algorithms() {
+  const [players, setPlayers] = useState<Player[]>([]);
+  const [matches, setMatches] = useState<Match[]>([]);
+  const [query, setQuery] = useState("");
+  const [searchMethod, setSearchMethod] = useState("linear");
+  const [searchResult, setSearchResult] = useState("");
+  const [sortMethod, setSortMethod] = useState("merge");
+  const [sorted, setSorted] = useState<Player[]>([]);
+  const [schedule, setSchedule] = useState<Match[]>([]);
+  const [status, setStatus] = useState("");
+
+  useEffect(() => {
+    api("/dashboard")
+      .then((data) => {
+        setPlayers(data.players || []);
+        setMatches(data.matches || []);
+        if (data.players?.[0]) setQuery(data.players[0].name);
+      })
+      .catch((error: Error) => setStatus(error.message));
+  }, []);
+
+  async function searchRun(method: string) {
+    setSearchMethod(method);
+    try {
+      const data = await api("/search", {
+        method: "POST",
+        body: JSON.stringify({ method, query }),
+      });
+      setSearchResult(
+        data.player
+          ? "Found " + data.player.name + " with " + data.player.points + " points (index " + data.index + ")."
+          : "No participant matched that name.",
+      );
+    } catch (error) {
+      setSearchResult(error instanceof Error ? error.message : "Search could not be completed.");
+    }
+  }
+
+  async function sortRun(method: string) {
+    setSortMethod(method);
+    try {
+      const data = await api("/sort", {
+        method: "POST",
+        body: JSON.stringify({ method }),
+      });
+      setSorted(data.players || []);
+      setStatus("");
+    } catch (error) {
+      setStatus(error instanceof Error ? error.message : "Sorting could not be completed.");
+    }
+  }
+
+  async function runGreedy() {
+    try {
+      const data = await api("/greedy", {
+        method: "POST",
+        body: JSON.stringify({ matches }),
+      });
+      setSchedule(data.selected || []);
+      setStatus("");
+    } catch (error) {
+      setStatus(error instanceof Error ? error.message : "Scheduling could not be completed.");
+    }
+  }
+
+  const visiblePlayers = sorted.length ? sorted : players;
+
+  return (
+    <>
+      <PageTitle
+        eyebrow="TOURNAMENT TOOLKIT"
+        title="Make better"
+        accent="match decisions."
+        description="Find competitors, compare leaderboard sorting methods, and create a schedule with fewer venue conflicts."
+        action="View participant leaderboard"
+        href="/leaderboard"
+      />
+
+      <div className="phase-heading">
+        <div>
+          <div className="eyebrow">FIND A COMPETITOR</div>
+          <h2>Search participant records</h2>
+        </div>
+        <Tag tone="blue">Linear · Binary</Tag>
+      </div>
+      <div className="two-column">
+        <Card>
+          <SectionHeading title="Search the roster" aside={<Tag tone="blue">O(n) / O(log n)</Tag>} />
+          <p className="muted-copy">
+            Linear search scans any roster. Binary search checks a name-sorted roster and halves the remaining range.
+          </p>
+          <div className="algorithm-input">
+            <label className="search-field">
+              <Search size={16} />
+              <input
+                value={query}
+                onChange={(event) => setQuery(event.target.value)}
+                placeholder="Participant name"
+              />
+            </label>
+            <button
+              className={"button " + (searchMethod === "linear" ? "primary-button" : "secondary-button")}
+              onClick={() => searchRun("linear")}
+            >
+              Linear search
+            </button>
+            <button
+              className={"button " + (searchMethod === "binary" ? "primary-button" : "secondary-button")}
+              onClick={() => searchRun("binary")}
+            >
+              <Binary size={15} /> Binary search
+            </button>
+          </div>
+          {searchResult && <div className="result-panel" role="status">{searchResult}</div>}
+          <div className="complexity-compare">
+            <div><b>Linear</b><span>Best O(1)</span><span>Worst O(n)</span><small>Any list order</small></div>
+            <div><b>Binary</b><span>Best O(1)</span><span>Worst O(log n)</span><small>Needs sorted input</small></div>
+          </div>
+        </Card>
+
+        <Card>
+          <SectionHeading title="Rank the leaderboard" aside={<Tag tone="gold">TWO METHODS</Tag>} />
+          <p className="muted-copy">
+            Compare selection sort for a small roster with merge sort for larger tournaments.
+          </p>
+          <div className="sort-controls">
+            <button
+              className={"button " + (sortMethod === "selection" ? "primary-button" : "secondary-button")}
+              onClick={() => sortRun("selection")}
+            >
+              Selection sort
+            </button>
+            <button
+              className={"button " + (sortMethod === "merge" ? "primary-button" : "secondary-button")}
+              onClick={() => sortRun("merge")}
+            >
+              <ArrowDownWideNarrow size={15} /> Merge sort
+            </button>
+          </div>
+          <div className="sort-bars">
+            {visiblePlayers.slice(0, 8).map((player) => (
+              <div
+                key={player.student_id}
+                title={player.name + " · " + player.points}
+                style={{ height: Math.max(22, player.points / 16) + "px" }}
+              >
+                <small>{player.points}</small>
+              </div>
+            ))}
+          </div>
+          <div className="sort-labels">
+            <span>{sortMethod === "merge" ? "Merge sort · O(n log n)" : "Selection sort · O(n²)"}</span>
+            <span>{visiblePlayers.length} competitors</span>
+          </div>
+          <div className="sorted-list">
+            {visiblePlayers.slice(0, 4).map((player, index) => (
+              <span key={player.student_id}>{index + 1}. {player.name} <b>{player.points}</b></span>
+            ))}
+            {!visiblePlayers.length && <span>No scored participants yet.</span>}
+          </div>
+        </Card>
+      </div>
+
+      <div className="phase-heading second-phase">
+        <div>
+          <div className="eyebrow">AVOID FIXTURE CONFLICTS</div>
+          <h2>Build a practical match schedule</h2>
+        </div>
+        <Tag tone="violet">GREEDY SCHEDULER</Tag>
+      </div>
+      <Card className="greedy-card">
+        <div className="greedy-head">
+          <SectionHeading title="Maximum non-overlapping fixtures" aside={<Tag tone="green">EARLIEST FINISH FIRST</Tag>} />
+          <button className="button primary-button" onClick={runGreedy}>
+            <Sparkles size={15} /> Solve schedule
+          </button>
+        </div>
+        <p className="muted-copy">
+          The scheduler sorts fixtures by finish time, then accepts each match that starts after the last selected match ends.
+        </p>
+        <div className="greedy-grid">
+          {matches.map((match) => {
+            const chosen = schedule.some((item) => item.name === match.name);
+            return (
+              <div className={"greedy-item " + (chosen ? "is-chosen" : "")} key={match.name}>
+                <span className="greedy-check">{chosen ? "✓" : "·"}</span>
+                <b>{match.name}</b>
+                <small>
+                  {new Date(match.start * 1000).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+                  {" - "}
+                  {new Date(match.end * 1000).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+                </small>
+                <Tag tone={chosen ? "green" : "neutral"}>
+                  {schedule.length ? (chosen ? "Selected" : "Skipped") : "Ready"}
+                </Tag>
+              </div>
+            );
+          })}
+          {!matches.length && <div className="empty-state">Add scheduled games to build a conflict-free plan.</div>}
+        </div>
+        <div className="algorithm-footnote">
+          <Zap size={14} /> Greedy interval scheduling · O(n log n) · uses tournament fixtures
+        </div>
+      </Card>
+      {status && <div className="notice" role="status">{status}</div>}
+    </>
+  );
 }

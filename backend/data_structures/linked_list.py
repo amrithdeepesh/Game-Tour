@@ -45,3 +45,9 @@ class LinkedList:
                 return current.data
             previous, current = current, current.next
         return None
+
+    def is_empty(self):
+        return self.head is None
+
+    def __len__(self):
+        return self.length

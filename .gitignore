@@ -5,14 +5,18 @@ backend/venv/
 .venv/
 .env
 .env.*
+!.env.deploy.example
 
-# Node
+# Node and generated frontend output
 frontend/node_modules/
 frontend/.next/
+frontend/.next-preserved-*/
 frontend/out/
 frontend/tsconfig.tsbuildinfo
 frontend/dev-out.log
 frontend/dev-err.log
-
-!backend/.env.example
+frontend/next-startup.*.log
 frontend/build-check.log
+
+# Local deployment secrets
+.env.deploy
