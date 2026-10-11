@@ -84,12 +84,17 @@ def leaderboard(faction=False):
  if faction:
   return query("""SELECT u.faction,COUNT(DISTINCT u.id) participants,COALESCE(SUM(r.score),0) points,COUNT(r.id) entries FROM users u LEFT JOIN results r ON r.participant_id=u.id WHERE u.role='student' GROUP BY u.faction ORDER BY points DESC,u.faction""")
  return query("""SELECT u.id user_id,u.display_name,u.faction,COALESCE(SUM(r.score),0) points,COALESCE(SUM(r.placement=1),0) first_places,COALESCE(SUM(r.placement=2),0) second_places,COUNT(r.id) entries FROM users u LEFT JOIN results r ON r.participant_id=u.id WHERE u.role='student' GROUP BY u.id,u.display_name,u.faction ORDER BY points DESC,first_places DESC,u.display_name""")
+def game_leaderboard(game_id):
+ return query("""SELECT u.id user_id,u.display_name,u.faction,COALESCE(SUM(r.score),0) points,COALESCE(SUM(r.placement=1),0) first_places,COALESCE(SUM(r.placement=2),0) second_places,COUNT(r.id) entries FROM game_choices c JOIN users u ON u.id=c.user_id LEFT JOIN results r ON r.participant_id=u.id AND r.game_id=c.game_id WHERE c.game_id=%s AND u.role='student' GROUP BY u.id,u.display_name,u.faction ORDER BY points DESC,first_places DESC,u.display_name""",(game_id,))
 def create_tournament(p):return mutate("INSERT INTO tournaments(name,description,starts_at,ends_at,status) VALUES(%s,%s,%s,%s,%s)",(p["name"],p.get("description",""),p.get("starts_at") or None,p.get("ends_at") or None,p.get("status","upcoming")))
 def create_game(p):return mutate("INSERT INTO games(tournament_id,name,category,rounds,starts_at,venue,capacity) VALUES(%s,%s,%s,%s,%s,%s,%s)",(p["tournament_id"],p["name"],p.get("category",""),p.get("rounds",1),p["starts_at"],p["venue"],p["capacity"]))
 def enroll(uid,ids):
  init();c=connect()
  try:
-  cur=c.cursor(dictionary=True);cur.execute("SELECT id FROM users WHERE id=%s FOR UPDATE",(uid,));cur.execute("SELECT COUNT(*) n FROM game_choices WHERE user_id=%s",(uid,))
+  cur=c.cursor(dictionary=True)
+  cur.execute("SELECT id FROM users WHERE id=%s FOR UPDATE",(uid,))
+  if not cur.fetchone():raise ValueError("Student account not found.")
+  cur.execute("SELECT COUNT(*) n FROM game_choices WHERE user_id=%s",(uid,))
   if cur.fetchone()["n"]:raise ValueError("Your game choices were already submitted and cannot be edited.")
   if not 1<=len(ids)<=5 or len(set(ids))!=len(ids):raise ValueError("Choose between 1 and 5 different games.")
   for gid in ids:

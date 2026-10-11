@@ -126,6 +126,9 @@ class Handler(BaseHTTPRequestHandler):
    if path=="/api/games":return self.send_json({"games":database.games()})
    if path=="/api/tournaments":return self.send_json({"tournaments":database.tournaments()})
    if path=="/api/choices":return self.send_json({"choices":database.choices(None if u["role"]=="admin" else u["id"])})
+   if path.startswith("/api/game-leaderboard/"):
+    game_id=int(path.rsplit("/",1)[1])
+    return self.send_json({"leaders":database.game_leaderboard(game_id)})
    if path=="/api/leaderboard":return self.send_json({"leaders":database.leaderboard()})
    if path=="/api/faction-leaderboard":return self.send_json({"leaders":database.leaderboard(True)})
    if path=="/api/participants":self.need("admin");return self.send_json({"participants":database.participants()})
