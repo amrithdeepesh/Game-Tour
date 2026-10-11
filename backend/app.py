@@ -95,7 +95,7 @@ class Handler(BaseHTTPRequestHandler):
  def send_json(self,data,status=200,extra=None):
   body=json.dumps(data,default=str).encode();self.send_response(status);self.send_header("Content-Type","application/json; charset=utf-8");origin=self.headers.get("Origin")
   if _allowed_frontend_origin(origin):self.send_header("Access-Control-Allow-Origin",origin);self.send_header("Access-Control-Allow-Credentials","true");self.send_header("Vary","Origin")
-  self.send_header("Access-Control-Allow-Headers","Content-Type");self.send_header("Access-Control-Allow-Methods","GET,POST,OPTIONS")
+  self.send_header("Access-Control-Allow-Headers","Content-Type");self.send_header("Access-Control-Allow-Methods","GET,POST,PUT,DELETE,OPTIONS")
   for k,v in extra or []:self.send_header(k,v)
   self.send_header("Content-Length",str(len(body)));self.end_headers();self.wfile.write(body)
  def payload(self):return json.loads(self.rfile.read(int(self.headers.get("Content-Length","0"))) or b"{}")
@@ -114,6 +114,28 @@ class Handler(BaseHTTPRequestHandler):
   if isinstance(e,(RuntimeError,mysql.connector.Error)):return self.send_json({"error":str(e) if isinstance(e,RuntimeError) else "MySQL is unavailable. Check backend/.env and the local MySQL service."},503)
   return self.send_json({"error":"Could not complete this request. Check the supplied details and database connection."},500)
  def do_OPTIONS(self):self.send_json({})
+ def do_PUT(self):
+  path=urlparse(self.path).path
+  try:
+   data=self.payload();self.need("admin")
+   if path.startswith("/api/tournaments/"):
+    database.update_tournament(int(path.rsplit("/",1)[1]),data);return self.send_json({"saved":True})
+   if path.startswith("/api/games/"):
+    database.update_game(int(path.rsplit("/",1)[1]),data);return self.send_json({"saved":True})
+   return self.send_json({"error":"Not found"},404)
+  except Exception as e:return self.error(e)
+ def do_DELETE(self):
+  path=urlparse(self.path).path
+  try:
+   self.need("admin")
+   if path.startswith("/api/tournaments/"):
+    database.delete_tournament(int(path.rsplit("/",1)[1]));return self.send_json({"deleted":True})
+   if path.startswith("/api/games/"):
+    database.delete_game(int(path.rsplit("/",1)[1]));return self.send_json({"deleted":True})
+   if path.startswith("/api/participants/"):
+    database.delete_participant(int(path.rsplit("/",1)[1]));return self.send_json({"deleted":True})
+   return self.send_json({"error":"Not found"},404)
+  except Exception as e:return self.error(e)
  def do_GET(self):
   path=urlparse(self.path).path
   try:
@@ -132,6 +154,7 @@ class Handler(BaseHTTPRequestHandler):
    if path=="/api/leaderboard":return self.send_json({"leaders":database.leaderboard()})
    if path=="/api/faction-leaderboard":return self.send_json({"leaders":database.leaderboard(True)})
    if path=="/api/participants":self.need("admin");return self.send_json({"participants":database.participants()})
+   if path=="/api/students":self.need("admin");return self.send_json({"students":database.students()})
    if path=="/api/results":self.need("admin");return self.send_json({"results":database.results()})
    if path=="/api/demo":return self.send_json(phase_demo())
    return self.send_json({"error":"Not found"},404)
@@ -154,6 +177,12 @@ class Handler(BaseHTTPRequestHandler):
     if u and token:database.delete_session(hashlib.sha256(token.encode()).hexdigest())
     return self.send_json({"ok":True},200,[("Set-Cookie","arena_session=; HttpOnly; SameSite=Lax; Path=/; Max-Age=0")])
    u=self.need()
+   if path=="/api/participants":
+    self.need("admin")
+    name=str(data.get("name","")).strip();username=str(data.get("username","")).strip().lower();email=str(data.get("email","")).strip().lower();faction=str(data.get("faction","")).strip();password=str(data.get("password",""))
+    if not name or not username or not email or not faction or len(password)<8:raise ValueError("Enter the participant’s name, username, email, faction, and a starter password of at least 8 characters.")
+    participant_id=database.create_user({"name":name,"username":username,"email":email,"faction":faction},password_hash(password))
+    return self.send_json({"id":participant_id,"created":True},201)
    if path=="/api/tournaments":
     self.need("admin")
     if not str(data.get("name","")).strip():raise ValueError("Tournament name is required.")

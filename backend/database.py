@@ -87,7 +87,72 @@ def leaderboard(faction=False):
 def game_leaderboard(game_id):
  return query("""SELECT u.id user_id,u.display_name,u.faction,COALESCE(SUM(r.score),0) points,COALESCE(SUM(r.placement=1),0) first_places,COALESCE(SUM(r.placement=2),0) second_places,COUNT(r.id) entries FROM game_choices c JOIN users u ON u.id=c.user_id LEFT JOIN results r ON r.participant_id=u.id AND r.game_id=c.game_id WHERE c.game_id=%s AND u.role='student' GROUP BY u.id,u.display_name,u.faction ORDER BY points DESC,first_places DESC,u.display_name""",(game_id,))
 def create_tournament(p):return mutate("INSERT INTO tournaments(name,description,starts_at,ends_at,status) VALUES(%s,%s,%s,%s,%s)",(p["name"],p.get("description",""),p.get("starts_at") or None,p.get("ends_at") or None,p.get("status","upcoming")))
+def update_tournament(tid,p):
+ name=str(p.get("name","")).strip()
+ if not name:raise ValueError("Enter a tournament name.")
+ init();c=connect()
+ try:
+  cur=c.cursor();cur.execute("SELECT id FROM tournaments WHERE id=%s FOR UPDATE",(tid,))
+  if not cur.fetchone():raise ValueError("This tournament no longer exists.")
+  cur.execute("UPDATE tournaments SET name=%s,description=%s WHERE id=%s",(name,str(p.get("description","")).strip(),tid))
+  c.commit()
+ except:c.rollback();raise
+ finally:c.close()
+def delete_tournament(tid):
+ init();c=connect()
+ try:
+  cur=c.cursor();cur.execute("SELECT id FROM tournaments WHERE id=%s FOR UPDATE",(tid,))
+  if not cur.fetchone():raise ValueError("This tournament no longer exists.")
+  cur.execute("SELECT id FROM games WHERE tournament_id=%s FOR UPDATE",(tid,));game_ids=[row[0] for row in cur.fetchall()]
+  if game_ids:
+   marks=",".join(["%s"]*len(game_ids))
+   cur.execute(f"DELETE FROM results WHERE game_id IN ({marks})",game_ids)
+   cur.execute(f"DELETE FROM game_choices WHERE game_id IN ({marks})",game_ids)
+   cur.execute(f"DELETE FROM games WHERE id IN ({marks})",game_ids)
+  cur.execute("DELETE FROM tournaments WHERE id=%s",(tid,));c.commit()
+ except:c.rollback();raise
+ finally:c.close()
 def create_game(p):return mutate("INSERT INTO games(tournament_id,name,category,rounds,starts_at,venue,capacity) VALUES(%s,%s,%s,%s,%s,%s,%s)",(p["tournament_id"],p["name"],p.get("category",""),p.get("rounds",1),p["starts_at"],p["venue"],p["capacity"]))
+def update_game(gid,p):
+ name=str(p.get("name","")).strip();venue=str(p.get("venue","")).strip()
+ capacity=int(p.get("capacity",0));starts_at=p.get("starts_at")
+ if not name or not venue or not starts_at:raise ValueError("Enter a game name, date and time, and place.")
+ if capacity<1:raise ValueError("The participant limit must be at least one.")
+ init();c=connect()
+ try:
+  cur=c.cursor(dictionary=True);cur.execute("SELECT id FROM games WHERE id=%s FOR UPDATE",(gid,));row=cur.fetchone()
+  if not row:raise ValueError("This game no longer exists.")
+  cur.execute("SELECT COUNT(*) enrolled FROM game_choices WHERE game_id=%s",(gid,));enrolled=cur.fetchone()["enrolled"]
+  if capacity<enrolled:raise ValueError("The participant limit cannot be lower than current registrations.")
+  tournament_id=int(p.get("tournament_id",0))
+  cur.execute("SELECT id FROM tournaments WHERE id=%s",(tournament_id,))
+  if not cur.fetchone():raise ValueError("Choose an existing tournament.")
+  cur.execute("UPDATE games SET tournament_id=%s,name=%s,category=%s,starts_at=%s,venue=%s,capacity=%s WHERE id=%s",(tournament_id,name,str(p.get("category","")).strip(),starts_at,venue,capacity,gid));c.commit()
+ except:c.rollback();raise
+ finally:c.close()
+def delete_game(gid):
+ init();c=connect()
+ try:
+  cur=c.cursor();cur.execute("SELECT id FROM games WHERE id=%s FOR UPDATE",(gid,))
+  if not cur.fetchone():raise ValueError("This game no longer exists.")
+  cur.execute("DELETE FROM results WHERE game_id=%s",(gid,))
+  cur.execute("DELETE FROM game_choices WHERE game_id=%s",(gid,))
+  cur.execute("DELETE FROM games WHERE id=%s",(gid,));c.commit()
+ except:c.rollback();raise
+ finally:c.close()
+def students():
+ return query("SELECT u.id,u.username,u.email,u.display_name name,u.faction,COUNT(c.game_id) game_count,COALESCE(GROUP_CONCAT(g.name ORDER BY g.starts_at SEPARATOR ', '),'') games FROM users u LEFT JOIN game_choices c ON c.user_id=u.id LEFT JOIN games g ON g.id=c.game_id WHERE u.role='student' GROUP BY u.id,u.username,u.email,u.display_name,u.faction ORDER BY u.display_name")
+def delete_participant(uid):
+ init();c=connect()
+ try:
+  cur=c.cursor();cur.execute("SELECT role FROM users WHERE id=%s FOR UPDATE",(uid,));row=cur.fetchone()
+  if not row or row[0]!="student":raise ValueError("This participant no longer exists.")
+  cur.execute("DELETE FROM sessions WHERE user_id=%s",(uid,))
+  cur.execute("DELETE FROM results WHERE participant_id=%s",(uid,))
+  cur.execute("DELETE FROM game_choices WHERE user_id=%s",(uid,))
+  cur.execute("DELETE FROM users WHERE id=%s AND role='student'",(uid,));c.commit()
+ except:c.rollback();raise
+ finally:c.close()
 def enroll(uid,ids):
  init();c=connect()
  try:

@@ -81,7 +81,7 @@ export default function Algorithms() {
         eyebrow="TOURNAMENT TOOLKIT"
         title="Make better"
         accent="match decisions."
-        description="Find competitors, compare leaderboard sorting methods, and create a schedule with fewer venue conflicts."
+        description="Find a player, arrange scores, or check a schedule for overlapping games."
         action="View participant leaderboard"
         href="/leaderboard"
       />
@@ -91,13 +91,13 @@ export default function Algorithms() {
           <div className="eyebrow">FIND A COMPETITOR</div>
           <h2>Search participant records</h2>
         </div>
-        <Tag tone="blue">Linear · Binary</Tag>
+        <Tag tone="blue">Find a player</Tag>
       </div>
       <div className="two-column">
         <Card>
-          <SectionHeading title="Search the roster" aside={<Tag tone="blue">O(n) / O(log n)</Tag>} />
+          <SectionHeading title="Search the roster" aside={<Tag tone="blue">Quick lookup</Tag>} />
           <p className="muted-copy">
-            Linear search scans any roster. Binary search checks a name-sorted roster and halves the remaining range.
+            Search by name. The quick option works best for a large player list.
           </p>
           <div className="algorithm-input">
             <label className="search-field">
@@ -105,46 +105,46 @@ export default function Algorithms() {
               <input
                 value={query}
                 onChange={(event) => setQuery(event.target.value)}
-                placeholder="Participant name"
+                placeholder="Type a participant name"
               />
             </label>
             <button
               className={"button " + (searchMethod === "linear" ? "primary-button" : "secondary-button")}
               onClick={() => searchRun("linear")}
             >
-              Linear search
+              Search all names
             </button>
             <button
               className={"button " + (searchMethod === "binary" ? "primary-button" : "secondary-button")}
               onClick={() => searchRun("binary")}
             >
-              <Binary size={15} /> Binary search
+              <Binary size={15} /> Quick name search
             </button>
           </div>
           {searchResult && <div className="result-panel" role="status">{searchResult}</div>}
           <div className="complexity-compare">
-            <div><b>Linear</b><span>Best O(1)</span><span>Worst O(n)</span><small>Any list order</small></div>
-            <div><b>Binary</b><span>Best O(1)</span><span>Worst O(log n)</span><small>Needs sorted input</small></div>
+            <div><b>Search all names</b><span>Checks each player</span><small>Works in any order</small></div>
+            <div><b>Quick name search</b><span>Narrows down the list</span><small>Best for many players</small></div>
           </div>
         </Card>
 
         <Card>
-          <SectionHeading title="Rank the leaderboard" aside={<Tag tone="gold">TWO METHODS</Tag>} />
+          <SectionHeading title="Arrange scores" aside={<Tag tone="gold">ORDER THE LIST</Tag>} />
           <p className="muted-copy">
-            Compare selection sort for a small roster with merge sort for larger tournaments.
+            Sort participants by points to see who is leading.
           </p>
           <div className="sort-controls">
             <button
               className={"button " + (sortMethod === "selection" ? "primary-button" : "secondary-button")}
               onClick={() => sortRun("selection")}
             >
-              Selection sort
+              Simple ordering
             </button>
             <button
               className={"button " + (sortMethod === "merge" ? "primary-button" : "secondary-button")}
               onClick={() => sortRun("merge")}
             >
-              <ArrowDownWideNarrow size={15} /> Merge sort
+              <ArrowDownWideNarrow size={15} /> Fast ordering
             </button>
           </div>
           <div className="sort-bars">
@@ -159,7 +159,7 @@ export default function Algorithms() {
             ))}
           </div>
           <div className="sort-labels">
-            <span>{sortMethod === "merge" ? "Merge sort · O(n log n)" : "Selection sort · O(n²)"}</span>
+            <span>{sortMethod === "merge" ? "Fast ordering" : "Simple ordering"}</span>
             <span>{visiblePlayers.length} competitors</span>
           </div>
           <div className="sorted-list">
@@ -173,20 +173,20 @@ export default function Algorithms() {
 
       <div className="phase-heading second-phase">
         <div>
-          <div className="eyebrow">AVOID FIXTURE CONFLICTS</div>
-          <h2>Build a practical match schedule</h2>
+          <div className="eyebrow">PLAN GAME TIMES</div>
+          <h2>Find a schedule with fewer overlaps</h2>
         </div>
-        <Tag tone="violet">GREEDY SCHEDULER</Tag>
+        <Tag tone="violet">SCHEDULE HELPER</Tag>
       </div>
       <Card className="greedy-card">
         <div className="greedy-head">
-          <SectionHeading title="Maximum non-overlapping fixtures" aside={<Tag tone="green">EARLIEST FINISH FIRST</Tag>} />
+          <SectionHeading title="Games that fit one after another" aside={<Tag tone="green">FEWER OVERLAPS</Tag>} />
           <button className="button primary-button" onClick={runGreedy}>
-            <Sparkles size={15} /> Solve schedule
+            <Sparkles size={15} /> Suggest a schedule
           </button>
         </div>
         <p className="muted-copy">
-          The scheduler sorts fixtures by finish time, then accepts each match that starts after the last selected match ends.
+          This suggestion arranges your scheduled games so fewer of them overlap.
         </p>
         <div className="greedy-grid">
           {matches.map((match) => {
@@ -209,7 +209,7 @@ export default function Algorithms() {
           {!matches.length && <div className="empty-state">Add scheduled games to build a conflict-free plan.</div>}
         </div>
         <div className="algorithm-footnote">
-          <Zap size={14} /> Greedy interval scheduling · O(n log n) · uses tournament fixtures
+          <Zap size={14} /> Suggestions are based on your scheduled games
         </div>
       </Card>
       {status && <div className="notice" role="status">{status}</div>}

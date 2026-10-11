@@ -1,15 +1,268 @@
 "use client";
-import {FormEvent,useEffect,useState} from "react";import {CalendarDays,MapPin,Plus,Users,Clock3,Medal} from "lucide-react";import {Card,PageTitle,SectionHeading,Tag} from "../components/ui";import {api,useRole} from "../components/role";
-const sqlDate=(v:string)=>v?v.replace("T"," ")+":00":"";
-export default function Tournament(){const {role}=useRole();const [tournaments,setTournaments]=useState<any[]>([]),[games,setGames]=useState<any[]>([]),[players,setPlayers]=useState<any[]>([]),[results,setResults]=useState<any[]>([]),[message,setMessage]=useState(""),[error,setError]=useState("");const [t,setT]=useState({name:"",description:"",starts_at:"",ends_at:""});const [g,setG]=useState({tournament_id:"",name:"",category:"",rounds:"1",starts_at:"",venue:"",capacity:""});const [score,setScore]=useState({game_id:"",winner_id:"",loser_id:"",round:"1",winner_score:"0",loser_score:"0"});
-async function load(){const d=await api("/dashboard");setTournaments(d.tournaments||[]);setGames(d.games||[]);if(!g.tournament_id&&d.tournaments?.length)setG(x=>({...x,tournament_id:String(d.tournaments[0].id)}));if(role==="admin"){const [pd,rd]=await Promise.all([api("/participants"),api("/results")]);setPlayers(pd.participants||[]);setResults(rd.results||[])}}
-useEffect(()=>{load().catch(e=>setError(e.message))},[]);
-const eligible=players.filter(p=>String(p.game_id)===score.game_id);
-async function createT(e:FormEvent){e.preventDefault();setError("");try{await api("/tournaments",{method:"POST",body:JSON.stringify({...t,starts_at:sqlDate(t.starts_at),ends_at:sqlDate(t.ends_at)})});setT({name:"",description:"",starts_at:"",ends_at:""});setMessage("Tournament created.");await load()}catch(e){setError(e instanceof Error?e.message:"Could not create tournament.")}}
-async function createG(e:FormEvent){e.preventDefault();setError("");try{await api("/games",{method:"POST",body:JSON.stringify({...g,tournament_id:Number(g.tournament_id),rounds:Number(g.rounds),capacity:Number(g.capacity),starts_at:sqlDate(g.starts_at)})});setG(x=>({...x,name:"",category:"",starts_at:"",venue:"",capacity:""}));setMessage("Game and schedule added.");await load()}catch(e){setError(e instanceof Error?e.message:"Could not add game.")}}
-async function saveScore(e:FormEvent){e.preventDefault();setError("");try{await api("/results",{method:"POST",body:JSON.stringify({...score,game_id:Number(score.game_id),winner_id:Number(score.winner_id),loser_id:Number(score.loser_id),round:Number(score.round),winner_score:Number(score.winner_score),loser_score:Number(score.loser_score)})});setMessage("Match result saved and both leaderboards updated.");await load()}catch(e){setError(e instanceof Error?e.message:"Could not save match result.")}}
-return <><PageTitle eyebrow={role==="admin"?"ADMIN · TOURNAMENT MANAGER":"TOURNAMENT SCHEDULE"} title={role==="admin"?"Tournaments & games":"Games & schedule"} description={role==="admin"?"Create tournaments, publish scheduled games, set rounds, venues, entry limits, and match results.":"See scheduled game times, venues, rounds, and remaining places."}/>{error&&<div className="form-error">{error}</div>}{message&&<div className="success-inline">{message}</div>}
-{role==="admin"&&<div className="two-column admin-forms"><Card className="form-card"><SectionHeading label="TOURNAMENT" title="Create a tournament"/><form className="stack-form" onSubmit={createT}><label>Tournament name<input required value={t.name} onChange={e=>setT({...t,name:e.target.value})}/></label><label>Description<input value={t.description} onChange={e=>setT({...t,description:e.target.value})}/></label><div className="form-two"><label>Starts<input type="datetime-local" value={t.starts_at} onChange={e=>setT({...t,starts_at:e.target.value})}/></label><label>Ends<input type="datetime-local" value={t.ends_at} onChange={e=>setT({...t,ends_at:e.target.value})}/></label></div><button className="button primary-button"><Plus size={15}/> Create tournament</button></form></Card>
-<Card className="form-card"><SectionHeading label="SCHEDULE" title="Add a game"/>{tournaments.length?<form className="stack-form" onSubmit={createG}><label>Tournament<select required value={g.tournament_id} onChange={e=>setG({...g,tournament_id:e.target.value})}>{tournaments.map(x=><option value={x.id} key={x.id}>{x.name}</option>)}</select></label><label>Game name<input required value={g.name} onChange={e=>setG({...g,name:e.target.value})}/></label><div className="form-two"><label>Category<input value={g.category} onChange={e=>setG({...g,category:e.target.value})}/></label><label>Rounds<input type="number" min="1" required value={g.rounds} onChange={e=>setG({...g,rounds:e.target.value})}/></label></div><label>Date & time<input type="datetime-local" required value={g.starts_at} onChange={e=>setG({...g,starts_at:e.target.value})}/></label><div className="form-two"><label>Place / venue<input required value={g.venue} onChange={e=>setG({...g,venue:e.target.value})}/></label><label>Participant limit<input type="number" min="1" required value={g.capacity} onChange={e=>setG({...g,capacity:e.target.value})}/></label></div><button className="button primary-button"><Plus size={15}/> Publish game</button></form>:<p>Create a tournament above, then add games to it.</p>}</Card></div>}
-<Card><SectionHeading label="SCHEDULE" title="Upcoming games" aside={<Tag>{games.length} scheduled</Tag>}/>{games.length?<div className="timeline-list">{games.map(g=><article className="timeline-event" key={g.id}><span className="timeline-marker"><CalendarDays size={17}/></span><div className="timeline-body"><div className="timeline-meta">{new Date(g.starts_at.replace(" ","T")).toLocaleString([], {dateStyle:"full",timeStyle:"short"})} · {g.tournament}</div><h3>{g.name} {g.category&&<Tag>{g.category}</Tag>}</h3><p><MapPin size={14}/>{g.venue}<span>·</span><Clock3 size={14}/>{g.rounds} rounds<span>·</span><Users size={14}/>{g.enrolled}/{g.capacity} participants</p></div></article>)}</div>:<div className="empty-state">No games scheduled. An administrator can add a tournament and games here.</div>}</Card>
-{role==="admin"&&<Card className="score-entry"><SectionHeading label="RESULTS" title="Record a match" aside={<Tag tone="gold"><Medal size={13}/>Leaderboard updates</Tag>}/><p className="muted-copy">Save the winner, runner-up, round, and each participant’s score.</p><form className="stack-form score-form" onSubmit={saveScore}><label>Game<select required value={score.game_id} onChange={e=>setScore({...score,game_id:e.target.value,winner_id:"",loser_id:""})}><option value="">Select a scheduled game</option>{games.map(x=><option key={x.id} value={x.id}>{x.name} · {x.tournament}</option>)}</select></label><div className="form-two"><label>Winner<select required value={score.winner_id} onChange={e=>setScore({...score,winner_id:e.target.value})}><option value="">Select winner</option>{eligible.map(x=><option key={x.id} value={x.id}>{x.name} · {x.faction}</option>)}</select></label><label>Winner score<input required type="number" min="0" value={score.winner_score} onChange={e=>setScore({...score,winner_score:e.target.value})}/></label><label>Runner-up<select required value={score.loser_id} onChange={e=>setScore({...score,loser_id:e.target.value})}><option value="">Select runner-up</option>{eligible.filter(x=>String(x.id)!==score.winner_id).map(x=><option key={x.id} value={x.id}>{x.name} · {x.faction}</option>)}</select></label><label>Runner-up score<input required type="number" min="0" value={score.loser_score} onChange={e=>setScore({...score,loser_score:e.target.value})}/></label><label>Round<input required type="number" min="1" value={score.round} onChange={e=>setScore({...score,round:e.target.value})}/></label></div><button className="button primary-button"><Plus size={15}/> Save match result</button></form>{results.length>0&&<div className="table-scroll result-table"><table><thead><tr><th>GAME</th><th>ROUND</th><th>PARTICIPANT</th><th>PLACE</th><th className="right">SCORE</th></tr></thead><tbody>{results.slice(0,8).map(x=><tr key={x.id}><td>{x.game}</td><td>{x.round_number}</td><td>{x.name}<small>{x.faction}</small></td><td>{x.placement?x.placement+" place":"—"}</td><td className="right points">{x.score}</td></tr>)}</tbody></table></div>}</Card>}</>}
+
+import { FormEvent, useEffect, useState } from "react";
+import { CalendarDays, Clock3, MapPin, Medal, Pencil, Plus, Trash2, Users, X } from "lucide-react";
+import { api, useRole } from "../components/role";
+import { Card, PageTitle, SectionHeading, Tag } from "../components/ui";
+
+type Tournament = { id: number; name: string; description: string; game_count: number };
+type Game = {
+  id: number; tournament_id: number; name: string; tournament: string; starts_at: string;
+  venue: string; enrolled: number; capacity: number; category?: string;
+};
+type Participant = { id: number; name: string; faction: string; game_id: number };
+type Result = { id: number; game: string; round_number: number; name: string; faction: string; score: number; placement: number };
+const newTournament = { name: "", description: "" };
+const newGame = { tournament_id: "", name: "", starts_at: "", venue: "", capacity: "20" };
+const sqlDate = (value: string) => value ? value.replace("T", " ") + ":00" : "";
+const localDate = (value: string) => value ? value.replace(" ", "T").slice(0, 16) : "";
+
+export default function TournamentPage() {
+  const { role } = useRole();
+  const admin = role === "admin";
+  const [tournaments, setTournaments] = useState<Tournament[]>([]);
+  const [games, setGames] = useState<Game[]>([]);
+  const [participants, setParticipants] = useState<Participant[]>([]);
+  const [results, setResults] = useState<Result[]>([]);
+  const [tournamentForm, setTournamentForm] = useState(newTournament);
+  const [gameForm, setGameForm] = useState(newGame);
+  const [editingTournament, setEditingTournament] = useState<number | null>(null);
+  const [editingGame, setEditingGame] = useState<number | null>(null);
+  const [score, setScore] = useState({ game_id: "", winner_id: "", loser_id: "", winner_score: "0", loser_score: "0" });
+  const [error, setError] = useState("");
+  const [notice, setNotice] = useState("");
+
+  async function load() {
+    const data = await api("/dashboard");
+    setTournaments(data.tournaments || []);
+    setGames(data.games || []);
+    if (!gameForm.tournament_id && data.tournaments?.length) {
+      setGameForm((form) => ({ ...form, tournament_id: String(data.tournaments[0].id) }));
+    }
+    if (admin) {
+      const [roster, history] = await Promise.all([api("/participants"), api("/results")]);
+      setParticipants(roster.participants || []);
+      setResults(history.results || []);
+    }
+  }
+
+  useEffect(() => {
+    let active = true;
+    const refresh = async () => {
+      try {
+        if (active) await load();
+      } catch (reason) {
+        if (active) setError(reason instanceof Error ? reason.message : "Could not load tournament details.");
+      }
+    };
+    void refresh();
+    const timer = window.setInterval(refresh, 30000);
+    return () => { active = false; window.clearInterval(timer); };
+  }, [role]);
+
+  async function saveTournament(event: FormEvent) {
+    event.preventDefault(); setError(""); setNotice("");
+    try {
+      const body = JSON.stringify(tournamentForm);
+      if (editingTournament) {
+        await api(`/tournaments/${editingTournament}`, { method: "PUT", body });
+        setNotice("Tournament details updated.");
+      } else {
+        await api("/tournaments", { method: "POST", body });
+        setNotice("Tournament created.");
+      }
+      setTournamentForm(newTournament); setEditingTournament(null); await load();
+    } catch (reason) {
+      setError(reason instanceof Error ? reason.message : "Could not save this tournament.");
+    }
+  }
+
+  async function removeTournament(tournament: Tournament) {
+    if (!window.confirm(`Delete “${tournament.name}” and its games, sign-ups, and scores?`)) return;
+    setError(""); setNotice("");
+    try {
+      await api(`/tournaments/${tournament.id}`, { method: "DELETE" });
+      if (editingTournament === tournament.id) { setEditingTournament(null); setTournamentForm(newTournament); }
+      setNotice("Tournament and its related records were deleted."); await load();
+    } catch (reason) {
+      setError(reason instanceof Error ? reason.message : "Could not delete this tournament.");
+    }
+  }
+
+  function editTournament(tournament: Tournament) {
+    setTournamentForm({ name: tournament.name, description: tournament.description || "" });
+    setEditingTournament(tournament.id); setNotice(""); setError("");
+  }
+
+  async function saveGame(event: FormEvent) {
+    event.preventDefault(); setError(""); setNotice("");
+    const body = JSON.stringify({
+      ...gameForm,
+      tournament_id: Number(gameForm.tournament_id),
+      capacity: Number(gameForm.capacity),
+      starts_at: sqlDate(gameForm.starts_at),
+      rounds: 1,
+    });
+    try {
+      if (editingGame) {
+        await api(`/games/${editingGame}`, { method: "PUT", body });
+        setNotice("Scheduled game updated.");
+      } else {
+        await api("/games", { method: "POST", body });
+        setNotice("Game added to the schedule.");
+      }
+      setGameForm((form) => ({ ...newGame, tournament_id: form.tournament_id }));
+      setEditingGame(null); await load();
+    } catch (reason) {
+      setError(reason instanceof Error ? reason.message : "Could not save this game.");
+    }
+  }
+
+  function editGame(game: Game) {
+    setGameForm({
+      tournament_id: String(game.tournament_id),
+      name: game.name,
+      starts_at: localDate(game.starts_at),
+      venue: game.venue,
+      capacity: String(game.capacity),
+    });
+    setEditingGame(game.id); setNotice(""); setError("");
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  }
+
+  async function removeGame(game: Game) {
+    if (!window.confirm(`Delete “${game.name}” and its sign-ups and scores?`)) return;
+    setError(""); setNotice("");
+    try {
+      await api(`/games/${game.id}`, { method: "DELETE" });
+      if (editingGame === game.id) { setEditingGame(null); setGameForm(newGame); }
+      setNotice("Game and its related records were deleted."); await load();
+    } catch (reason) {
+      setError(reason instanceof Error ? reason.message : "Could not delete this game.");
+    }
+  }
+
+  async function saveResult(event: FormEvent) {
+    event.preventDefault(); setError(""); setNotice("");
+    try {
+      await api("/results", {
+        method: "POST",
+        body: JSON.stringify({
+          ...score, game_id: Number(score.game_id), winner_id: Number(score.winner_id),
+          loser_id: Number(score.loser_id), round: 1,
+          winner_score: Number(score.winner_score), loser_score: Number(score.loser_score),
+        }),
+      });
+      setNotice("Result saved. Standings have been updated."); await load();
+    } catch (reason) {
+      setError(reason instanceof Error ? reason.message : "Could not save this result.");
+    }
+  }
+
+  const eligible = participants.filter((person) => String(person.game_id) === score.game_id);
+
+  return (
+    <>
+      <PageTitle
+        eyebrow={admin ? "ADMIN · EVENT MANAGEMENT" : "EVENT SCHEDULE"}
+        title={admin ? "Manage your competition" : "Games and schedule"}
+        description={admin
+          ? "Create events, make changes, manage sign-ups, and post results from one place."
+          : "See what is coming up, where it will happen, and how many places are left."}
+      />
+      {error && <div className="form-error" role="alert">{error}</div>}
+      {notice && <div className="success-inline" role="status">{notice}</div>}
+
+      {admin && (
+        <>
+          <div className="two-column admin-forms">
+            <Card className="form-card">
+              <SectionHeading title={editingTournament ? "Edit tournament" : "New tournament"} />
+              <form className="stack-form" onSubmit={saveTournament}>
+                <label>Tournament name<input required value={tournamentForm.name} onChange={(e) => setTournamentForm({ ...tournamentForm, name: e.target.value })} /></label>
+                <label>Short description <span className="muted-copy">(optional)</span><input value={tournamentForm.description} onChange={(e) => setTournamentForm({ ...tournamentForm, description: e.target.value })} /></label>
+                <div className="form-actions">
+                  <button className="button primary-button"><Plus size={16} />{editingTournament ? "Save changes" : "Create tournament"}</button>
+                  {editingTournament && <button type="button" className="button secondary-button" onClick={() => { setEditingTournament(null); setTournamentForm(newTournament); }}><X size={16} />Cancel</button>}
+                </div>
+              </form>
+            </Card>
+
+            <Card className="form-card">
+              <SectionHeading title={editingGame ? "Edit scheduled game" : "Add a game"} />
+              {tournaments.length ? (
+                <form className="stack-form" onSubmit={saveGame}>
+                  <label>Tournament<select required value={gameForm.tournament_id} onChange={(e) => setGameForm({ ...gameForm, tournament_id: e.target.value })}>{tournaments.map((item) => <option value={item.id} key={item.id}>{item.name}</option>)}</select></label>
+                  <label>Game name<input required value={gameForm.name} onChange={(e) => setGameForm({ ...gameForm, name: e.target.value })} /></label>
+                  <div className="form-two">
+                    <label>Date and time<input required type="datetime-local" value={gameForm.starts_at} onChange={(e) => setGameForm({ ...gameForm, starts_at: e.target.value })} /></label>
+                    <label>Place<input required value={gameForm.venue} onChange={(e) => setGameForm({ ...gameForm, venue: e.target.value })} /></label>
+                  </div>
+                  <label>Maximum participants<input required type="number" min={editingGame ? games.find((item) => item.id === editingGame)?.enrolled || 1 : 1} value={gameForm.capacity} onChange={(e) => setGameForm({ ...gameForm, capacity: e.target.value })} /></label>
+                  <div className="form-actions">
+                    <button className="button primary-button"><Plus size={16} />{editingGame ? "Save changes" : "Add to schedule"}</button>
+                    {editingGame && <button type="button" className="button secondary-button" onClick={() => { setEditingGame(null); setGameForm(newGame); }}><X size={16} />Cancel</button>}
+                  </div>
+                </form>
+              ) : <p>Create a tournament first, then add its games.</p>}
+            </Card>
+          </div>
+
+          <Card className="manage-tournaments">
+            <SectionHeading title="Your tournaments" aside={<Tag>{tournaments.length} total</Tag>} />
+            {!tournaments.length && <div className="empty-state">Your new tournaments will appear here.</div>}
+            <div className="manage-list">
+              {tournaments.map((item) => (
+                <div className="manage-row" key={item.id}>
+                  <span className="manage-row-icon"><CalendarDays size={18} /></span>
+                  <span className="manage-row-copy"><b>{item.name}</b><small>{item.game_count} games · {item.description || "No description"}</small></span>
+                  <button className="icon-button" onClick={() => editTournament(item)} aria-label={`Edit ${item.name}`}><Pencil size={16} /></button>
+                  <button className="icon-button danger" onClick={() => removeTournament(item)} aria-label={`Delete ${item.name}`}><Trash2 size={16} /></button>
+                </div>
+              ))}
+            </div>
+          </Card>
+        </>
+      )}
+
+      <Card className="schedule-panel">
+        <SectionHeading title={admin ? "Scheduled games" : "Upcoming games"} aside={<Tag>{games.length} events</Tag>} />
+        {games.length ? (
+          <div className="timeline-list">
+            {games.map((game) => (
+              <article className="timeline-event" key={game.id}>
+                <span className="timeline-marker"><CalendarDays size={17} /></span>
+                <div className="timeline-body">
+                  <div className="timeline-meta">{new Date(game.starts_at.replace(" ", "T")).toLocaleString([], { dateStyle: "medium", timeStyle: "short" })} · {game.tournament}</div>
+                  <h3>{game.name}</h3>
+                  <p><MapPin size={14} /> {game.venue} <span>·</span> <Users size={14} /> {game.enrolled} of {game.capacity} places filled</p>
+                </div>
+                {admin && <div className="admin-actions">
+                  <button className="icon-button" onClick={() => editGame(game)} aria-label={`Edit ${game.name}`}><Pencil size={16} /></button>
+                  <button className="icon-button danger" onClick={() => removeGame(game)} aria-label={`Delete ${game.name}`}><Trash2 size={16} /></button>
+                </div>}
+              </article>
+            ))}
+          </div>
+        ) : <div className="empty-state">No games scheduled yet.</div>}
+      </Card>
+
+      {admin && <Card className="score-entry">
+        <SectionHeading title="Post a result" aside={<Tag tone="gold"><Medal size={14} />Updates standings</Tag>} />
+        <p className="muted-copy">Choose a game and enter the winner, runner-up, and their scores.</p>
+        <form className="stack-form score-form" onSubmit={saveResult}>
+          <label>Game<select required value={score.game_id} onChange={(e) => setScore({ ...score, game_id: e.target.value, winner_id: "", loser_id: "" })}><option value="">Choose a game</option>{games.map((game) => <option value={game.id} key={game.id}>{game.name} · {game.tournament}</option>)}</select></label>
+          {eligible.length > 0 && <div className="form-two">
+            <label>Winner<select required value={score.winner_id} onChange={(e) => setScore({ ...score, winner_id: e.target.value })}><option value="">Choose winner</option>{eligible.map((person) => <option value={person.id} key={person.id}>{person.name} · {person.faction}</option>)}</select></label>
+            <label>Winner score<input required type="number" min="0" value={score.winner_score} onChange={(e) => setScore({ ...score, winner_score: e.target.value })} /></label>
+            <label>Runner-up<select required value={score.loser_id} onChange={(e) => setScore({ ...score, loser_id: e.target.value })}><option value="">Choose runner-up</option>{eligible.filter((person) => String(person.id) !== score.winner_id).map((person) => <option value={person.id} key={person.id}>{person.name} · {person.faction}</option>)}</select></label>
+            <label>Runner-up score<input required type="number" min="0" value={score.loser_score} onChange={(e) => setScore({ ...score, loser_score: e.target.value })} /></label>
+          </div>}
+          {score.game_id && !eligible.length && <div className="notice">No students have signed up for this game yet.</div>}
+          <button className="button primary-button" disabled={!eligible.length}><Plus size={16} />Save result</button>
+        </form>
+        {results.length > 0 && <div className="recent-results"><b>Recent results</b>{results.slice(0, 5).map((result) => <div className="result-line" key={result.id}><span>{result.game}</span><span>{result.name} · {result.score} pts</span></div>)}</div>}
+      </Card>}
+    </>
+  );
+}

@@ -24,8 +24,8 @@ const studentNav = [
   { href: "/participants", label: "My game choices", icon: Users },
   { href: "/leaderboard", label: "Participant leaderboard", icon: Medal },
   { href: "/faction-leaderboard", label: "Faction leaderboard", icon: Flag },
-  { href: "/structures", label: "Competition operations", icon: Boxes },
-  { href: "/algorithms", label: "Standings tools", icon: BookOpen },
+  { href: "/structures", label: "Game day tools", icon: Boxes },
+  { href: "/algorithms", label: "Find & plan", icon: BookOpen },
 ];
 
 const adminNav = [
@@ -34,8 +34,8 @@ const adminNav = [
   { href: "/participants", label: "Participants", icon: Users },
   { href: "/leaderboard", label: "Participant leaderboard", icon: Medal },
   { href: "/faction-leaderboard", label: "Faction leaderboard", icon: Flag },
-  { href: "/structures", label: "Competition operations", icon: Boxes },
-  { href: "/algorithms", label: "Standings tools", icon: BookOpen },
+  { href: "/structures", label: "Game day tools", icon: Boxes },
+  { href: "/algorithms", label: "Find & plan", icon: BookOpen },
 ];
 
 export default function SiteShell({ children }: { children: React.ReactNode }) {

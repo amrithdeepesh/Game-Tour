@@ -74,14 +74,14 @@ export default function Structures() {
     linkedList.current.insertAtEnd({ student_id: id, name, game: "Practice record" });
     setRecords(linkedList.current.traverse());
     setParticipantName("");
-    setStructureMessage("Inserted the participant at the tail of the linked list.");
+    setStructureMessage("Participant added to the list.");
   }
 
   function deleteParticipant() {
     const removed = linkedList.current.deleteByStudentId(participantId.trim());
     setRecords(linkedList.current.traverse());
     setStructureMessage(
-      removed ? "Deleted " + removed.name + " from the linked list." : "No record has that participant ID.",
+      removed ? "Removed " + removed.name + " from the list." : "No participant has that number.",
     );
   }
 
@@ -93,25 +93,25 @@ export default function Structures() {
   function pushAction() {
     actionStack.current.push("Score update ST00" + (stack.length + 1));
     setStack(actionStack.current.toArray());
-    setStructureMessage("Pushed a score update onto the action stack.");
+    setStructureMessage("Added a score update to recent actions.");
   }
 
   function popAction() {
     const removed = actionStack.current.pop();
     setStack(actionStack.current.toArray());
-    setStructureMessage(removed ? "Popped: " + removed : "The action stack is empty.");
+    setStructureMessage(removed ? "Removed latest action: " + removed : "There are no recent actions.");
   }
 
   function enqueueMatch() {
     checkInQueue.current.enqueue("New match check-in");
     setQueue(checkInQueue.current.toArray());
-    setStructureMessage("Enqueued a match at the back of the line.");
+    setStructureMessage("Added the match to the end of the check-in line.");
   }
 
   function dequeueMatch() {
     const removed = checkInQueue.current.dequeue();
     setQueue(checkInQueue.current.toArray());
-    setStructureMessage(removed ? "Dequeued: " + removed : "The match queue is empty.");
+    setStructureMessage(removed ? "Next in line: " + removed : "The check-in line is empty.");
   }
 
   async function evaluate() {
@@ -133,25 +133,25 @@ export default function Structures() {
     <>
       <PageTitle
         eyebrow="TOURNAMENT OPERATIONS"
-        title="The system behind"
-        accent="every match."
-        description="See how participant records, score lookups, check-ins, and venue routes work."
-        action="Open standings tools"
+        title="Everything behind"
+        accent="every game."
+        description="Try the simple tools that keep game day organized."
+        action="Open leaderboard tools"
         href="/algorithms"
       />
 
       <div className="phase-heading">
         <div>
           <div className="eyebrow">PARTICIPANT RECORDS</div>
-          <h2>Manage the roster as a linked list</h2>
+          <h2>Manage the participant list</h2>
         </div>
-        <Tag>Insert · delete · traverse</Tag>
+        <Tag>Add · remove · view</Tag>
       </div>
       <div className="two-column">
         <Card>
           <SectionHeading title="Participant list" aside={<Tag tone="green">HEAD → TAIL</Tag>} />
           <p className="muted-copy">
-            The records begin with current game choices. Insert a practice record, remove by ID, or traverse the list in order.
+            Try adding a sample participant, removing one, or viewing the list in order.
           </p>
           <div className="linked-track">
             {records.map((record, index) => (
@@ -171,59 +171,59 @@ export default function Structures() {
               className="demo-input"
               value={participantId}
               onChange={(event) => setParticipantId(event.target.value)}
-              placeholder="Participant ID"
-              aria-label="Participant ID"
+              placeholder="Participant number"
+              aria-label="Participant number"
             />
             <input
               className="demo-input"
               value={participantName}
               onChange={(event) => setParticipantName(event.target.value)}
-              placeholder="Name for new record"
+              placeholder="Participant name"
               aria-label="Name for new record"
             />
           </div>
           <div className="structure-buttons">
-            <button onClick={insertParticipant}>Insert at tail</button>
-            <button onClick={deleteParticipant}>Delete by ID</button>
-            <button onClick={traverseParticipants}>Traverse list</button>
+            <button onClick={insertParticipant}>Add participant</button>
+            <button onClick={deleteParticipant}>Remove participant</button>
+            <button onClick={traverseParticipants}>Show participants</button>
           </div>
           <div className="structure-meta">
-            <span><GitBranch size={14} /> Singly linked records</span>
-            <b>{records.length} nodes</b>
+            <span><GitBranch size={14} /> Participant records</span>
+            <b>{records.length} participants</b>
           </div>
         </Card>
 
         <Card>
-          <SectionHeading title="Match operations" aside={<Tag tone="blue">LINKED NODES</Tag>} />
+          <SectionHeading title="Game day flow" aside={<Tag tone="blue">GAME DAY</Tag>} />
           <div className="mini-structure">
             <div>
-              <div className="eyebrow">ACTION HISTORY · LIFO</div>
+              <div className="eyebrow">RECENT ACTIONS</div>
               <div className="stack-card">
-                <span className="top-label">TOP</span>
-                <b>{stack[0] || "Stack is empty"}</b>
+                <span className="top-label">LATEST</span>
+                <b>{stack[0] || "No recent actions"}</b>
               </div>
               <div className="structure-buttons">
-                <button onClick={pushAction}>Push action</button>
-                <button onClick={popAction}>Pop</button>
+                <button onClick={pushAction}>Add recent action</button>
+                <button onClick={popAction}>Undo latest</button>
               </div>
             </div>
             <div>
-              <div className="eyebrow">MATCH CHECK-IN · FIFO</div>
+              <div className="eyebrow">CHECK-IN LINE</div>
               <div className="queue-card">
-                <span className="top-label">FRONT</span>
-                <b>{queue[0] || "Queue is empty"}</b>
+                <span className="top-label">NEXT</span>
+                <b>{queue[0] || "No one waiting"}</b>
               </div>
               <div className="structure-buttons">
-                <button onClick={enqueueMatch}>Enqueue match</button>
-                <button onClick={dequeueMatch}>Dequeue</button>
+                <button onClick={enqueueMatch}>Add to line</button>
+                <button onClick={dequeueMatch}>Next in line</button>
               </div>
             </div>
           </div>
           {structureMessage && <div className="form-message">{structureMessage}</div>}
           <div className="expression-tool">
-            <label><Braces size={15} /> Evaluate arithmetic with an operator stack</label>
+            <label><Braces size={15} /> Quick score calculator</label>
             <input value={expr} onChange={(event) => setExpr(event.target.value)} />
-            <button onClick={evaluate}>Evaluate</button>
+            <button onClick={evaluate}>Calculate</button>
             <b>{result}</b>
           </div>
         </Card>
@@ -231,22 +231,22 @@ export default function Structures() {
 
       <div className="phase-heading second-phase">
         <div>
-          <div className="eyebrow">SCORE INDEX & VENUE ROUTES</div>
-          <h2>Look up standings and navigate the arena</h2>
+          <div className="eyebrow">SCORES & GAME DAY</div>
+          <h2>Explore scores and game day</h2>
         </div>
-        <Tag>Binary search tree · Graph</Tag>
+        <Tag>Scores · Venue map</Tag>
       </div>
       <div className="two-column">
         <Card>
-          <SectionHeading title="Score search tree" aside={<Tag>Ordered score index</Tag>} />
+          <SectionHeading title="Score summary" aside={<Tag>Sorted scores</Tag>} />
           <p className="muted-copy">
-            Scores are stored in a binary search tree. Inorder lists them in order; search follows the tree branches.
+            These views show the same scores in three useful orders, with a quick check for a score.
           </p>
           <div className="traversal-list">
             {[
-              ["INORDER", demo?.tree.inorder],
-              ["PREORDER", demo?.tree.preorder],
-              ["POSTORDER", demo?.tree.postorder],
+              ["LOW TO HIGH", demo?.tree.inorder],
+              ["FIRST SCORE FIRST", demo?.tree.preorder],
+              ["RELATED SCORES FIRST", demo?.tree.postorder],
             ].map(([label, values]: any) => (
               <div className="traversal-row" key={label}>
                 <b>{label}</b>
@@ -255,16 +255,16 @@ export default function Structures() {
             ))}
           </div>
           <div className="traversal-row compact">
-            <b>BST SEARCH</b>
+            <b>SCORE CHECK</b>
             <span>
               {demo ? (demo.tree.searchFound ? "Found " : "Not found ") + demo.tree.searchValue : "Loading..."}
             </span>
           </div>
         </Card>
         <Card>
-          <SectionHeading title="Venue connections" aside={<Tag tone="green">ADJACENCY LIST</Tag>} />
+          <SectionHeading title="Places around the venue" aside={<Tag tone="green">VENUE GUIDE</Tag>} />
           <p className="muted-copy">
-            Each arena location stores its connected venues. Breadth-first and depth-first traversals show routes through the graph.
+            See which event spaces are connected and two ways to explore the venue.
           </p>
           <div className="graph-map">
             <div className="graph-edge edge-one" />
@@ -277,14 +277,14 @@ export default function Structures() {
             <span className="graph-vertex v-court">Court A</span>
             <span className="graph-vertex v-table">Table Tennis</span>
           </div>
-          <div className="traversal-row compact"><b>BFS</b><span>{demo?.graph.bfs.join(" → ") || "Loading..."}</span></div>
-          <div className="traversal-row compact"><b>DFS</b><span>{demo?.graph.dfs.join(" → ") || "Loading..."}</span></div>
+          <div className="traversal-row compact"><b>ROUTE A</b><span>{demo?.graph.bfs.join(" → ") || "Loading..."}</span></div>
+          <div className="traversal-row compact"><b>ROUTE B</b><span>{demo?.graph.dfs.join(" → ") || "Loading..."}</span></div>
         </Card>
       </div>
       <div className="phase-bridge">
         <Layers3 size={18} />
-        <span>Search and scheduling tools use these same tournament records.</span>
-        <a href="/algorithms">Explore standings tools →</a>
+        <span>Leaderboard and schedule tools use the same tournament details.</span>
+        <a href="/algorithms">Explore leaderboard tools →</a>
       </div>
     </>
   );
