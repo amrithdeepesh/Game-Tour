@@ -26,6 +26,10 @@ docker compose --env-file .env.deploy down
 
 This keeps the database volume. Back up the volume before moving or replacing deployment hosts.
 
+## Public deployment settings
+
+For a public site, put the stack behind a domain and HTTPS reverse proxy. Set `FRONTEND_ORIGINS` to the exact public origin (for example, `https://tournament.example.com`) and set `COOKIE_SECURE=true` in `.env.deploy`; the browser session cookie will then only travel over HTTPS. Keep `.env.deploy` private. Set up scheduled, off-host MySQL backups and test restoring them before accepting real registrations. The app does not yet send email verification or password-reset messages; connect an email provider and implement that workflow before relying on public self-registration.
+
 ## Run locally for development
 
 Configure the local MySQL credentials and administrator account in the private `backend/.env` file, then start the backend:
@@ -80,9 +84,10 @@ npm run build
 ## Main product pages
 
 - **Dashboard:** personalized greeting, selected games, schedule timeline, and quick links.
-- **Games & schedule:** tournament creation, fixture scheduling, capacity, venue, and rounds.
-- **My game choices:** one-time student selection, capped at five games.
-- **Participant leaderboard:** game results and individual scores.
+- **Games & schedule:** tournament creation and editing, registration deadlines, scoring rules, fixture times, duration, capacity, venue, and rounds.
+- **My game choices:** one-time student selection, capped at five games, with full-game and time-conflict checks.
+- **Record results:** admin-only per-game and per-round scoring, placement-based tournament points, no-show/disqualification handling, and a result change history.
+- **Participant leaderboard:** per-game top scorers and tournament-filtered individual standings.
 - **Faction leaderboard:** aggregate standings by faction.
 - **Competition operations:** roster and venue structures used by tournament workflows.
 - **Standings tools:** searching, sorting, efficiency comparison, and conflict-free scheduling.

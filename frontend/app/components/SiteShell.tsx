@@ -32,6 +32,7 @@ const adminNav = [
   { href: "/", label: "Dashboard", icon: BarChart3 },
   { href: "/tournament", label: "Tournaments & games", icon: Trophy },
   { href: "/participants", label: "Participants", icon: Users },
+  { href: "/results", label: "Record results", icon: Medal },
   { href: "/leaderboard", label: "Participant leaderboard", icon: Medal },
   { href: "/faction-leaderboard", label: "Faction leaderboard", icon: Flag },
   { href: "/structures", label: "Game day tools", icon: Boxes },
@@ -100,13 +101,6 @@ export default function SiteShell({ children }: { children: React.ReactNode }) {
             <span className="brand-mark"><Command size={19} /></span>
             <span>arena<span className="brand-dot">.</span></span>
           </Link>
-          <div className="workspace-switch">
-            <span className="workspace-icon">GT</span>
-            <span>
-              <b>Game Tour DS</b>
-              <small>{user.role === "admin" ? "Admin console" : "Student workspace"}</small>
-            </span>
-          </div>
           <div className="nav-label">WORKSPACE</div>
           <nav className="side-nav">
             {nav.map(({ href, label, icon: Icon }) => (
@@ -121,12 +115,6 @@ export default function SiteShell({ children }: { children: React.ReactNode }) {
             ))}
           </nav>
           <div className="sidebar-bottom">
-            <div className="help-card">
-              <div className="eyebrow">TOURNAMENT TOOLS</div>
-              <b>Operations in action</b>
-              <p>See how rosters, standings, and schedules work.</p>
-              <Link href="/structures">Explore operations →</Link>
-            </div>
             <div className="profile">
               <span className="avatar">{user.name.slice(0, 2).toUpperCase()}</span>
               <span>

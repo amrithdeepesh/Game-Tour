@@ -48,7 +48,7 @@ export default function ActivityPage() {
         {games.map((game) => <article className="timeline-event" key={game.id}>
           <span className="timeline-marker"><CalendarDays size={17}/></span>
           <div className="timeline-body">
-            <div className="timeline-meta">{new Date(game.starts_at.replace(" ", "T")).toLocaleString([], { dateStyle: "medium", timeStyle: "short" })} · {game.tournament}</div>
+            <div className="timeline-meta">{new Date(game.starts_at.replace(" ", "T") + "Z").toLocaleString([], { dateStyle: "medium", timeStyle: "short" })} · {game.tournament}</div>
             <h3>{game.name}</h3>
             <p><MapPin size={14}/> {game.venue} <span>·</span> <Users size={14}/> {game.enrolled} of {game.capacity} places filled</p>
           </div>

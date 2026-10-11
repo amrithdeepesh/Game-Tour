@@ -1,12 +1,12 @@
 "use client";
 
 import { FormEvent, useEffect, useState } from "react";
-import { Check, LockKeyhole, Save, Trash2, UserPlus, Users } from "lucide-react";
+import { Check, LockKeyhole, Save, UserPlus, Users } from "lucide-react";
 import { api, useRole } from "../components/role";
 import { Card, PageTitle, SectionHeading, Tag } from "../components/ui";
 
-type Game = { id: number; name: string; category?: string; tournament: string; starts_at: string; venue: string; enrolled: number; capacity: number };
-type Student = { id: number; name: string; faction: string; username: string; email: string; game_count: number; games: string };
+type Game = { id: number; name: string; category?: string; tournament: string; starts_at: string; registration_closes_at?: string | null; duration_minutes: number; venue: string; enrolled: number; capacity: number };
+type Student = { id: number; name: string; faction: string; username: string; email: string; is_active: number; game_count: number; games: string };
 type Choice = { id: number; name: string; faction: string; username: string; game: string; game_id: number };
 
 const blank = { name: "", email: "", faction: "", username: "", password: "" };
@@ -40,7 +40,22 @@ export default function Participation() {
   useEffect(() => { load().catch((reason) => setError(reason.message)); }, [user?.role]);
 
   function toggle(id: number) {
-    setMine((current) => current.includes(id) ? current.filter((item) => item !== id) : current.length < 5 ? [...current, id] : current);
+    setError("");
+    setMine((current) => {
+      if (current.includes(id)) return current.filter((item) => item !== id);
+      if (current.length >= 5) return current;
+      const next = games.find(game => game.id === id);
+      if (!next) return current;
+      const start = new Date(next.starts_at.replace(" ", "T") + "Z").getTime();
+      const end = start + Math.max(1, next.duration_minutes || 60) * 60000;
+      const conflict = current.map(existing => games.find(game => game.id === existing)).find(game => {
+        if (!game) return false;
+        const otherStart = new Date(game.starts_at.replace(" ", "T") + "Z").getTime();
+        return start < otherStart + Math.max(1, game.duration_minutes || 60) * 60000 && otherStart < end;
+      });
+      if (conflict) { setError(`That game overlaps with ${conflict.name}. Choose a different time.`); return current; }
+      return [...current, id];
+    });
   }
 
   async function createStudent(event: FormEvent) {
@@ -53,13 +68,13 @@ export default function Participation() {
     finally { setBusy(false); }
   }
 
-  async function removeStudent(student: Student) {
-    if (!window.confirm(`Remove ${student.name}'s account and their registrations and scores?`)) return;
+  async function setStudentActive(student: Student) {
+    const active = !Boolean(student.is_active);
     setError(""); setNotice("");
     try {
-      await api(`/participants/${student.id}`, { method: "DELETE" });
-      setNotice(`${student.name} was removed.`); await load();
-    } catch (reason) { setError(reason instanceof Error ? reason.message : "Could not remove participant."); }
+      await api(`/participants/${student.id}/status`, { method: "PUT", body: JSON.stringify({ active }) });
+      setNotice(`${student.name} account ${active ? "reactivated" : "deactivated"}. Past results remain in the standings.`); await load();
+    } catch (reason) { setError(reason instanceof Error ? reason.message : "Could not update participant."); }
   }
 
   async function submitChoices(event: FormEvent) {
@@ -72,7 +87,7 @@ export default function Participation() {
   }
 
   if (user?.role === "admin") return <>
-    <PageTitle eyebrow="PEOPLE" title="Manage participants" description="Add student accounts, see their game choices, and remove accounts when needed." />
+    <PageTitle eyebrow="PEOPLE" title="Manage participants" description="Add student accounts, review game choices, and pause or restore access while preserving past results." />
     {error && <div className="form-error" role="alert">{error}</div>}
     {notice && <div className="success-inline" role="status">{notice}</div>}
     <div className="two-column admin-forms">
@@ -84,19 +99,19 @@ export default function Participation() {
           <label>Faction<input required value={form.faction} onChange={(e) => setForm({ ...form, faction: e.target.value })} /></label>
           <div className="form-two">
             <label>Username<input required minLength={3} value={form.username} onChange={(e) => setForm({ ...form, username: e.target.value })} /></label>
-            <label>Starter password<input required minLength={8} type="password" value={form.password} onChange={(e) => setForm({ ...form, password: e.target.value })} /></label>
+            <label>Starter password<input required minLength={12} maxLength={128} type="password" value={form.password} onChange={(e) => setForm({ ...form, password: e.target.value })} /></label>
           </div>
           <p className="muted-copy">The student can sign in with these details and choose up to five games.</p>
           <button className="button primary-button" disabled={busy}><UserPlus size={16}/>{busy ? "Adding…" : "Add participant"}</button>
         </form>
       </Card>
       <Card>
-        <SectionHeading title="Student accounts" aside={<Tag><Users size={14}/>{students.length} students</Tag>} />
+        <SectionHeading title="Student accounts" aside={<Tag><Users size={14}/>{students.filter(student => student.is_active).length} active · {students.length} total</Tag>} />
         <div className="manage-list">
           {students.map((student) => <div className="manage-row" key={student.id}>
             <span className="manage-row-icon"><Users size={17}/></span>
-            <span className="manage-row-copy"><b>{student.name}</b><small>{student.faction} · {student.username} · {student.game_count} games selected</small></span>
-            <button className="icon-button danger" aria-label={`Remove ${student.name}`} title="Remove participant" onClick={() => removeStudent(student)}><Trash2 size={16}/></button>
+            <span className="manage-row-copy"><b>{student.name}</b><small>{student.faction} · {student.username} · {student.game_count} games selected · {student.is_active ? "Active" : "Access paused"}</small></span>
+            <button className={"button " + (student.is_active ? "secondary-button" : "primary-button")} aria-label={`${student.is_active ? "Pause" : "Restore"} ${student.name}`} onClick={() => setStudentActive(student)}>{student.is_active ? "Pause access" : "Restore access"}</button>
           </div>)}
           {!students.length && <div className="empty-state">No student accounts yet. Add the first participant here.</div>}
         </div>
@@ -118,10 +133,10 @@ export default function Participation() {
     <div className="choice-summary"><span><Users size={18}/> {mine.length} of 5 games selected</span>{locked && <Tag tone="green"><LockKeyhole size={13}/> choices saved</Tag>}</div>
     <form onSubmit={submitChoices}><div className="choice-grid">
       {games.map((game) => <label key={game.id} className={"choice-card " + (mine.includes(game.id) ? "selected" : "")}>
-        <input type="checkbox" checked={mine.includes(game.id)} disabled={locked || game.enrolled >= game.capacity || (!mine.includes(game.id) && mine.length >= 5)} onChange={() => toggle(game.id)} />
+        <input type="checkbox" checked={mine.includes(game.id)} disabled={locked || game.enrolled >= game.capacity || new Date(game.starts_at.replace(" ", "T") + "Z").getTime() <= Date.now() || Boolean(game.registration_closes_at && new Date(game.registration_closes_at.replace(" ", "T") + "Z").getTime() <= Date.now()) || (!mine.includes(game.id) && mine.length >= 5)} onChange={() => toggle(game.id)} />
         <span className="choice-check">{mine.includes(game.id) && <Check size={15}/>}</span>
-        <span className="choice-copy"><b>{game.name}</b><small>{game.tournament}</small><small>{new Date(game.starts_at.replace(" ", "T")).toLocaleString([], { dateStyle: "medium", timeStyle: "short" })} · {game.venue}</small></span>
-        <Tag tone={game.enrolled >= game.capacity ? "gold" : "green"}>{game.enrolled}/{game.capacity} places</Tag>
+        <span className="choice-copy"><b>{game.name}</b><small>{game.tournament}</small><small>{new Date(game.starts_at.replace(" ", "T") + "Z").toLocaleString([], { dateStyle: "medium", timeStyle: "short" })} · {game.venue}</small></span>
+        <Tag tone={game.enrolled >= game.capacity ? "gold" : "green"}>{game.enrolled >= game.capacity ? "Full" : `${game.capacity-game.enrolled} places left`}</Tag>
       </label>)}
     </div>
     {!games.length && <Card className="empty-state">No games have been scheduled yet.</Card>}
