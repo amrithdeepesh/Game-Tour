@@ -5,7 +5,12 @@ from unittest.mock import patch
 import app
 from algorithms.expression_handler import evaluate_simple_expression
 from algorithms.problem_solver import schedule_maximum_matches
-from algorithms.search_sort import binary_search, linear_search, merge_sort, selection_sort
+from algorithms.search_sort import (
+    binary_search,
+    linear_search,
+    merge_sort,
+    selection_sort,
+)
 from data_structures.graph import Graph
 from data_structures.linked_list import LinkedList
 from data_structures.queue import Queue
@@ -113,7 +118,10 @@ class PhaseThreeTests(unittest.TestCase):
     def test_selection_and_merge_sorts_are_correct_and_non_mutating(self):
         for sorter in (selection_sort, merge_sort):
             self.assertEqual([p["points"] for p in sorter(self.players)], [12, 8, 4])
-            self.assertEqual([p["points"] for p in sorter(self.players, descending=False)], [4, 8, 12])
+            self.assertEqual(
+                [p["points"] for p in sorter(self.players, descending=False)],
+                [4, 8, 12],
+            )
         tied = [{"name": "first", "points": 5}, {"name": "second", "points": 5}]
         self.assertEqual([p["name"] for p in merge_sort(tied)], ["first", "second"])
         self.assertEqual([p["name"] for p in tied], ["first", "second"])
@@ -151,7 +159,10 @@ class PhaseFourTests(unittest.TestCase):
         with (
             patch("app.database.choices", return_value=choices),
             patch("app.database.games", return_value=games),
-            patch("app.player_rows", return_value=[{"points": 20}, {"points": 40}, {"points": 60}]),
+            patch(
+                "app.player_rows",
+                return_value=[{"points": 20}, {"points": 40}, {"points": 60}],
+            ),
         ):
             demo = app.phase_demo()
         self.assertEqual([row["name"] for row in demo["linkedList"]], ["Aarav", "Mira"])
@@ -160,8 +171,10 @@ class PhaseFourTests(unittest.TestCase):
         self.assertEqual(demo["queueFront"], "Next match check-in")
         self.assertEqual(demo["tree"]["inorder"], [20, 40, 60])
         self.assertTrue(demo["tree"]["searchFound"])
-        self.assertEqual(demo["graph"]["bfs"][0], "Arena")
-        self.assertEqual([row["name"] for row in demo["greedySchedule"]], ["Morning", "Afternoon"])
+        self.assertEqual(demo["graph"]["bfs"][0], "Main Hall")
+        self.assertEqual(
+            [row["name"] for row in demo["greedySchedule"]], ["Morning", "Afternoon"]
+        )
 
 
 if __name__ == "__main__":

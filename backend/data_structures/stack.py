@@ -15,6 +15,7 @@ class Stack:
         self._length += 1
 
     def pop(self):
+        """Pop top element. Returns None on stack underflow."""
         if self.top is None:
             return None
         data = self.top.data
@@ -23,6 +24,7 @@ class Stack:
         return data
 
     def peek(self):
+        """Return top element without removing, or None if empty."""
         return None if self.top is None else self.top.data
 
     def is_empty(self):
@@ -34,6 +36,10 @@ class Stack:
             values.append(node.data)
             node = node.next
         return values
+
+    def display(self):
+        """Alias for to_list() to satisfy viva / syllabus requirement."""
+        return self.to_list()
 
     def __len__(self):
         return self._length

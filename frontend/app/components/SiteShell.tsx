@@ -4,39 +4,49 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import {
+  Activity,
   BarChart3,
   BookOpen,
   Boxes,
+  CalendarDays,
   Command,
+  Cpu,
   Flag,
+  Flame,
   LogOut,
   Medal,
   Moon,
+  Search,
+  Shield,
   Sun,
   Trophy,
+  UserCheck,
+  UserRound,
   Users,
 } from "lucide-react";
 import { api, RoleContext, type User } from "./role";
 
 const studentNav = [
   { href: "/", label: "Dashboard", icon: BarChart3 },
-  { href: "/tournament", label: "Games & schedule", icon: Trophy },
-  { href: "/participants", label: "My game choices", icon: Users },
-  { href: "/leaderboard", label: "Participant leaderboard", icon: Medal },
-  { href: "/faction-leaderboard", label: "Faction leaderboard", icon: Flag },
-  { href: "/structures", label: "Game day tools", icon: Boxes },
-  { href: "/algorithms", label: "Find & plan", icon: BookOpen },
+  { href: "/sports", label: "Sports Catalogue", icon: Trophy },
+  { href: "/my-events", label: "My Events", icon: CalendarDays },
+  { href: "/factions", label: "Factions", icon: Shield },
+  { href: "/leaderboard", label: "Leaderboard", icon: Medal },
+  { href: "/faction-leaderboard", label: "Faction Standings", icon: Flag },
+  { href: "/profile", label: "My Profile", icon: UserRound },
+  { href: "/lab", label: "Search & Find", icon: Search },
 ];
 
 const adminNav = [
   { href: "/", label: "Dashboard", icon: BarChart3 },
-  { href: "/tournament", label: "Tournaments & games", icon: Trophy },
-  { href: "/participants", label: "Participants", icon: Users },
-  { href: "/results", label: "Record results", icon: Medal },
-  { href: "/leaderboard", label: "Participant leaderboard", icon: Medal },
-  { href: "/faction-leaderboard", label: "Faction leaderboard", icon: Flag },
-  { href: "/structures", label: "Game day tools", icon: Boxes },
-  { href: "/algorithms", label: "Find & plan", icon: BookOpen },
+  { href: "/tournament", label: "Event Management", icon: Trophy },
+  { href: "/factions", label: "Faction Management", icon: Shield },
+  { href: "/participants", label: "Students & Roster", icon: Users },
+  { href: "/results", label: "Record Results", icon: Medal },
+  { href: "/schedule", label: "Timetable & Scheduling", icon: CalendarDays },
+  { href: "/leaderboard", label: "Student Standings", icon: Medal },
+  { href: "/faction-leaderboard", label: "Faction Standings", icon: Flag },
+  { href: "/lab", label: "Search & Find", icon: Search },
 ];
 
 export default function SiteShell({ children }: { children: React.ReactNode }) {
@@ -82,26 +92,45 @@ export default function SiteShell({ children }: { children: React.ReactNode }) {
 
   if (publicPage) {
     return (
-      <RoleContext.Provider value={{ role: user?.role || "student", user, loading, refresh, logout }}>
+      <RoleContext.Provider
+        value={{ role: user?.role || "student", user, loading, refresh, logout }}
+      >
         <main className="auth-page">{children}</main>
       </RoleContext.Provider>
     );
   }
 
-  if (loading || !user) return <div className="auth-loading">Loading your workspace…</div>;
+  if (loading || !user) {
+    return (
+      <div className="auth-loading" style={{ display: "grid", placeItems: "center", minHeight: "100vh", gap: 16 }}>
+        <div className="arena-logo">
+          <span className="arena-badge"><Flame size={20} /></span>
+          <span>ARENA</span>
+        </div>
+        <div>Loading college sports workspace…</div>
+      </div>
+    );
+  }
 
   const nav = user.role === "admin" ? adminNav : studentNav;
-  const active = nav.find((item) => (item.href === "/" ? path === "/" : path.startsWith(item.href)));
+  const active = nav.find((item) =>
+    item.href === "/" ? path === "/" : path.startsWith(item.href)
+  );
 
   return (
-    <RoleContext.Provider value={{ role: user.role, user, loading, refresh, logout }}>
+    <RoleContext.Provider
+      value={{ role: user.role, user, loading, refresh, logout }}
+    >
       <div className="app-shell">
         <aside className="sidebar">
-          <Link href="/" className="brand">
-            <span className="brand-mark"><Command size={19} /></span>
-            <span>arena<span className="brand-dot">.</span></span>
+          <Link href="/" className="arena-logo" style={{ textDecoration: "none", marginBottom: 12 }}>
+            <span className="arena-badge"><Flame size={20} /></span>
+            <div style={{ display: "flex", flexDirection: "column", lineHeight: 1 }}>
+              <span style={{ fontWeight: 900, letterSpacing: "-0.5px" }}>ARENA</span>
+              <span className="arena-sub">COLLEGE SPORTS</span>
+            </div>
           </Link>
-          <div className="nav-label">WORKSPACE</div>
+          <div className="nav-label" style={{ marginTop: 14 }}>WORKSPACE</div>
           <nav className="side-nav">
             {nav.map(({ href, label, icon: Icon }) => (
               <Link
@@ -119,7 +148,11 @@ export default function SiteShell({ children }: { children: React.ReactNode }) {
               <span className="avatar">{user.name.slice(0, 2).toUpperCase()}</span>
               <span>
                 <b>{user.name}</b>
-                <small>{user.role === "admin" ? "Administrator" : user.faction + " · Student"}</small>
+                <small>
+                  {user.role === "admin"
+                    ? "Administrator"
+                    : `${user.faction || "Independent"} · Student`}
+                </small>
               </span>
             </div>
           </div>
@@ -127,13 +160,18 @@ export default function SiteShell({ children }: { children: React.ReactNode }) {
         <section className="main-area">
           <header className="topbar">
             <div className="breadcrumbs">
-              <Link href="/">Game Tour DS</Link>
+              <Link href="/">ARENA</Link>
               <span>/</span>
-              <b>{active?.label || "Workspace"}</b>
+              <b>{active?.label || "Tournament Portal"}</b>
             </div>
             <div className="topbar-actions">
-              <span className="role-pill">{user.role === "admin" ? "ADMIN" : "STUDENT"}</span>
-              <button className="theme-toggle" onClick={() => setDark((value) => !value)}>
+              <span className="role-pill">
+                {user.role === "admin" ? "ADMINISTRATOR" : "STUDENT"}
+              </span>
+              <button
+                className="theme-toggle"
+                onClick={() => setDark((value) => !value)}
+              >
                 {dark ? <Sun size={17} /> : <Moon size={17} />}
                 <span>{dark ? "Light" : "Dark"}</span>
               </button>

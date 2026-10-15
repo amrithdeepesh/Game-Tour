@@ -1,7 +1,8 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect, useState } from "react";
-import { ArrowDownWideNarrow, Binary, Search, Sparkles, Zap } from "lucide-react";
+import { ArrowDownWideNarrow, Binary, Info, Search, Sparkles, Zap } from "lucide-react";
 import { Card, PageTitle, SectionHeading, Tag } from "../components/ui";
 import { api } from "../components/role";
 
@@ -17,6 +18,7 @@ export default function Algorithms() {
   const [sortMethod, setSortMethod] = useState("merge");
   const [sorted, setSorted] = useState<Player[]>([]);
   const [schedule, setSchedule] = useState<Match[]>([]);
+  const [planReady, setPlanReady] = useState(false);
   const [status, setStatus] = useState("");
 
   useEffect(() => {
@@ -66,8 +68,10 @@ export default function Algorithms() {
         method: "POST",
         body: JSON.stringify({ matches }),
       });
-      setSchedule(data.selected || []);
-      setStatus("");
+      const selected = data.selected || [];
+      setSchedule(selected);
+      setPlanReady(true);
+      setStatus(`Suggested ${selected.length} of ${matches.length} games with no time clashes.`);
     } catch (error) {
       setStatus(error instanceof Error ? error.message : "Scheduling could not be completed.");
     }
@@ -78,26 +82,36 @@ export default function Algorithms() {
   return (
     <>
       <PageTitle
-        eyebrow="TOURNAMENT TOOLKIT"
-        title="Make better"
-        accent="match decisions."
-        description="Find a player, arrange scores, or check a schedule for overlapping games."
+        eyebrow="COMPETITION PLANNING"
+        title="Get tournament day"
+        accent="running smoothly."
+        description="Find competitors, review the standings, and build a schedule with fewer time clashes."
         action="View participant leaderboard"
         href="/leaderboard"
       />
 
+      <div className="tools-note" style={{ display: "flex", justifyContent: "space-between", alignItems: "center", background: "var(--blue-soft)", borderColor: "var(--blue)" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+          <Info size={19} color="var(--blue)" />
+          <span style={{ color: "var(--ink)" }}>Looking for player finder, tournament formulas, championship brackets, and interactive game flow?</span>
+        </div>
+        <Link href="/lab" className="button primary-button" style={{ fontSize: 12 }}>
+          Open Search & Find
+        </Link>
+      </div>
+
       <div className="phase-heading">
         <div>
-          <div className="eyebrow">FIND A COMPETITOR</div>
-          <h2>Search participant records</h2>
+          <div className="eyebrow">PLAYER LOOKUP</div>
+          <h2>Find a participant</h2>
         </div>
         <Tag tone="blue">Find a player</Tag>
       </div>
       <div className="two-column">
         <Card>
-          <SectionHeading title="Search the roster" aside={<Tag tone="blue">Quick lookup</Tag>} />
+          <SectionHeading title="Search player roster" aside={<Tag tone="blue">Name lookup</Tag>} />
           <p className="muted-copy">
-            Search by name. The quick option works best for a large player list.
+            Find a player by name in the tournament participant list.
           </p>
           <div className="algorithm-input">
             <label className="search-field">
@@ -112,39 +126,39 @@ export default function Algorithms() {
               className={"button " + (searchMethod === "linear" ? "primary-button" : "secondary-button")}
               onClick={() => searchRun("linear")}
             >
-              Search all names
+              Search roster
             </button>
             <button
               className={"button " + (searchMethod === "binary" ? "primary-button" : "secondary-button")}
               onClick={() => searchRun("binary")}
             >
-              <Binary size={15} /> Quick name search
+              <Binary size={15} /> Quick find
             </button>
           </div>
           {searchResult && <div className="result-panel" role="status">{searchResult}</div>}
           <div className="complexity-compare">
-            <div><b>Search all names</b><span>Checks each player</span><small>Works in any order</small></div>
-            <div><b>Quick name search</b><span>Narrows down the list</span><small>Best for many players</small></div>
+            <div><b>Search roster</b><span>Checks the participant list</span><small>Useful for any roster size</small></div>
+            <div><b>Quick find</b><span>Returns a faster lookup</span><small>Useful for larger tournaments</small></div>
           </div>
         </Card>
 
         <Card>
-          <SectionHeading title="Arrange scores" aside={<Tag tone="gold">ORDER THE LIST</Tag>} />
+          <SectionHeading title="Review the standings" aside={<Tag tone="gold">POINTS TABLE</Tag>} />
           <p className="muted-copy">
-            Sort participants by points to see who is leading.
+            Arrange the current participant scores to see who is leading.
           </p>
           <div className="sort-controls">
             <button
               className={"button " + (sortMethod === "selection" ? "primary-button" : "secondary-button")}
               onClick={() => sortRun("selection")}
             >
-              Simple ordering
+              Standard ranking
             </button>
             <button
               className={"button " + (sortMethod === "merge" ? "primary-button" : "secondary-button")}
               onClick={() => sortRun("merge")}
             >
-              <ArrowDownWideNarrow size={15} /> Fast ordering
+              <ArrowDownWideNarrow size={15} /> Quick ranking
             </button>
           </div>
           <div className="sort-bars">
@@ -159,7 +173,7 @@ export default function Algorithms() {
             ))}
           </div>
           <div className="sort-labels">
-            <span>{sortMethod === "merge" ? "Fast ordering" : "Simple ordering"}</span>
+            <span>{sortMethod === "merge" ? "Quick ranking" : "Standard ranking"}</span>
             <span>{visiblePlayers.length} competitors</span>
           </div>
           <div className="sorted-list">
@@ -173,20 +187,20 @@ export default function Algorithms() {
 
       <div className="phase-heading second-phase">
         <div>
-          <div className="eyebrow">PLAN GAME TIMES</div>
-          <h2>Find a schedule with fewer overlaps</h2>
+          <div className="eyebrow">SCHEDULE PLANNING</div>
+          <h2>Avoid game-time clashes</h2>
         </div>
         <Tag tone="violet">SCHEDULE HELPER</Tag>
       </div>
       <Card className="greedy-card">
         <div className="greedy-head">
-          <SectionHeading title="Games that fit one after another" aside={<Tag tone="green">FEWER OVERLAPS</Tag>} />
+          <SectionHeading title="Suggested game-day plan" aside={<Tag tone="green">TIME-CLASH CHECK</Tag>} />
           <button className="button primary-button" onClick={runGreedy}>
-            <Sparkles size={15} /> Suggest a schedule
+            <Sparkles size={15} /> Build a game-day plan
           </button>
         </div>
         <p className="muted-copy">
-          This suggestion arranges your scheduled games so fewer of them overlap.
+          Select the largest set of scheduled games that can run without overlapping. This is a suggestion only; it does not change the published schedule.
         </p>
         <div className="greedy-grid">
           {matches.map((match) => {
@@ -201,7 +215,7 @@ export default function Algorithms() {
                   {new Date(match.end * 1000).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
                 </small>
                 <Tag tone={chosen ? "green" : "neutral"}>
-                  {schedule.length ? (chosen ? "Selected" : "Skipped") : "Ready"}
+                  {planReady ? (chosen ? "Suggested" : "Time clash") : "Ready to check"}
                 </Tag>
               </div>
             );
@@ -209,7 +223,7 @@ export default function Algorithms() {
           {!matches.length && <div className="empty-state">Add scheduled games to build a conflict-free plan.</div>}
         </div>
         <div className="algorithm-footnote">
-          <Zap size={14} /> Suggestions are based on your scheduled games
+          <Zap size={14} /> Based on the current game times in your schedule
         </div>
       </Card>
       {status && <div className="notice" role="status">{status}</div>}

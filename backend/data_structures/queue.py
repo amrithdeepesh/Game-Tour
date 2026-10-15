@@ -19,6 +19,7 @@ class Queue:
         self._length += 1
 
     def dequeue(self):
+        """Dequeue front element. Returns None on empty queue."""
         if self.front is None:
             return None
         data = self.front.data
@@ -29,7 +30,12 @@ class Queue:
         return data
 
     def peek(self):
+        """Return front element without removing, or None if empty."""
         return None if self.front is None else self.front.data
+
+    def get_front(self):
+        """Alias for peek / front element."""
+        return self.peek()
 
     def is_empty(self):
         return self.front is None
@@ -40,6 +46,10 @@ class Queue:
             values.append(node.data)
             node = node.next
         return values
+
+    def display(self):
+        """Alias for to_list() to satisfy viva / syllabus requirement."""
+        return self.to_list()
 
     def __len__(self):
         return self._length
