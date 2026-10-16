@@ -378,6 +378,29 @@ class Handler(BaseHTTPRequestHandler):
                 return self.send_json({"ok": True, "database": "mysql"})
             if path == "/api/me":
                 return self.send_json({"user": self.user()})
+            if path == "/api/logout":
+                u = self.user()
+                cookie = self.headers.get("Cookie", "")
+                token = next(
+                    (
+                        x.split("=", 1)[1]
+                        for x in cookie.split("; ")
+                        if x.startswith("arena_session=")
+                    ),
+                    None,
+                )
+                if u and token:
+                    database.delete_session(hashlib.sha256(token.encode()).hexdigest())
+                return self.send_json(
+                    {"ok": True},
+                    200,
+                    [
+                        (
+                            "Set-Cookie",
+                            "arena_session=; HttpOnly; SameSite=Lax; Path=/; Max-Age=0",
+                        )
+                    ],
+                )
             u = self.need()
             if path == "/api/dashboard":
                 gs = database.games()

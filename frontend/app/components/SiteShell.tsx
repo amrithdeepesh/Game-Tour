@@ -55,7 +55,7 @@ export default function SiteShell({ children }: { children: React.ReactNode }) {
   const [dark, setDark] = useState(true);
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
-  const publicPage = path === "/login" || path === "/register";
+  const publicPage = path === "/login" || path === "/register" || path === "/logout" || path === "/signout";
 
   async function refresh() {
     try {
@@ -81,13 +81,18 @@ export default function SiteShell({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     if (!loading && !publicPage && !user) router.replace("/login");
-    if (!loading && publicPage && user) router.replace("/");
+    if (!loading && publicPage && user && path !== "/logout" && path !== "/signout") router.replace("/");
   }, [loading, user, path]);
 
   async function logout() {
-    await api("/logout", { method: "POST" });
-    setUser(null);
-    router.replace("/login");
+    try {
+      await api("/logout", { method: "POST" });
+    } catch {
+      // Ignore network errors and proceed with local logout
+    } finally {
+      setUser(null);
+      window.location.href = "/login";
+    }
   }
 
   if (publicPage) {
