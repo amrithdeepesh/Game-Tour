@@ -15,6 +15,7 @@ import {
   Award,
   AlertCircle,
   CheckCircle2,
+  Trash2,
 } from "lucide-react";
 import { api, useRole } from "../components/role";
 import { Card, PageTitle, SectionHeading, Tag } from "../components/ui";
@@ -117,6 +118,24 @@ export default function FactionsPage() {
       await load();
     } catch (err: any) {
       setError(err.message);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function handleRemoveStudent(id: number, name: string) {
+    if (!window.confirm(`Permanently remove student account for "${name}"? This will delete their account and registrations.`)) {
+      return;
+    }
+    setError("");
+    setNotice("");
+    setBusy(true);
+    try {
+      await api(`/participants/${id}`, { method: "DELETE" });
+      setNotice(`Student account "${name}" removed successfully.`);
+      await load();
+    } catch (err: any) {
+      setError(err.message || "Failed to remove student account.");
     } finally {
       setBusy(false);
     }
@@ -322,6 +341,7 @@ export default function FactionsPage() {
                   <th>USERNAME</th>
                   <th>FACTION</th>
                   <th>EMAIL</th>
+                  <th>ACTION</th>
                 </tr>
               </thead>
               <tbody>
@@ -333,6 +353,26 @@ export default function FactionsPage() {
                       <td><code>{s.username}</code></td>
                       <td><Tag tone="blue">{s.faction}</Tag></td>
                       <td>{s.email}</td>
+                      <td>
+                        <button
+                          className="button secondary-button"
+                          style={{
+                            color: "var(--red, #e86363)",
+                            borderColor: "rgba(232, 99, 99, 0.4)",
+                            padding: "4px 10px",
+                            fontSize: 12,
+                            display: "inline-flex",
+                            alignItems: "center",
+                            gap: 5,
+                            cursor: "pointer",
+                          }}
+                          disabled={busy}
+                          title={`Remove ${s.name}'s account`}
+                          onClick={() => handleRemoveStudent(s.id, s.name)}
+                        >
+                          <Trash2 size={13} /> Remove
+                        </button>
+                      </td>
                     </tr>
                   ))}
               </tbody>

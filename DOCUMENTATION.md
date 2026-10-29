@@ -1,319 +1,243 @@
-# ARENA — College Sports Tournament Management System
-## Comprehensive Technical Documentation, Architecture & Viva Guide
+# ARENA — Data Structures & Algorithms Implementation Guide
+
+This document outlines the complete mapping and implementation details of all four development phases in the ARENA Tournament Management System across both the **Backend Codebase** and the **Frontend Browser UI**.
 
 ---
 
-## 1. Executive Summary & System Overview
+## Quick Reference Summary Table
 
-**ARENA** is an enterprise-grade College Sports Tournament Management System engineered to orchestrate multi-sport athletic meets, campus leagues, and collegiate tournaments. The system seamlessly unifies high-throughput sports operations—such as multi-event registration, automated waiting lists, live match scoring, faction championships, and venue scheduling—with a pedagogical **Data Structures & Algorithms Laboratory** (`/lab`) implemented from scratch in pure Python.
-
-### Architectural Philosophy
-- **Zero Third-Party DS/Algo Dependencies**: All fundamental data structures (Singly Linked List, Linked Stack, Linked Queue, Binary Tree, Binary Search Tree, Graph Adjacency List) and algorithms (Shunting-Yard Infix/Postfix, Linear Search, Binary Search, Merge Sort, Selection Sort, Multi-Venue Greedy Scheduler) are implemented from first principles without standard library wrappers (`collections.deque`, `heapq`, `bisect`, etc.).
-- **Dual Perspective**: Operates simultaneously as a production-grade responsive tournament platform for collegiate athletes & tournament directors, and as an interactive testbed exposing granular algorithmic step traces, state visualizers, and empirical runtime benchmarks.
-- **Data Integrity & Backwards Compatibility**: Preserves all existing database relations and unit tests while adding scalable schema extensions for college factions, live scoreboards, match fixtures, waiting lists, and announcements.
-
----
-
-## 2. Technology Stack & Directory Topology
-
-```
-c:\Arena\project (C:\game_tour_ds)
-├── backend/
-│   ├── algorithms/
-│   │   ├── __init__.py
-│   │   ├── expression_handler.py     # Shunting-yard infix->postfix, postfix evaluator & traces
-│   │   ├── problem_solver.py         # Multi-venue greedy scheduler with conflict resolution
-│   │   └── search_sort.py            # Linear/Binary search & Merge/Selection sort with step traces
-│   ├── data_structures/
-│   │   ├── __init__.py
-│   │   ├── graph.py                  # Adjacency List, custom Queue-driven BFS & DFS with queue traces
-│   │   ├── linked_list.py            # Singly Linked List (insert/delete by pos/val/id, search, traverse)
-│   │   ├── queue.py                  # FIFO Queue using linked nodes
-│   │   ├── stack.py                  # LIFO Stack using linked nodes
-│   │   └── tree.py                   # BST (delete 0/1/2 children, min/max, traversals) & Bracket Tree
-│   ├── tests/
-│   │   ├── test_arena_extensions.py  # 8 comprehensive tests for new custom DS/Algo features
-│   │   ├── test_phase_requirements.py# Phase 1-4 validation tests
-│   │   ├── test_real_world_validation.py # Auth, security, and input constraint tests
-│   │   └── test_tournament_deletion.py  # Atomic transactional cascade deletion tests
-│   ├── app.py                        # REST API routing, session auth, CORS, and DS Lab endpoints
-│   ├── database.py                   # MySQL connection pooling, schema migrations, and relational queries
-│   ├── schema.sql                    # Initial relational schema definition
-│   └── venv/                         # Python 3.14 virtual environment
-└── frontend/
-    ├── app/
-    │   ├── components/
-    │   │   ├── role.tsx              # User context, session state, and fetch wrapper
-    │   │   ├── SiteShell.tsx         # Sidebar navigation, theme toggler, and layout wrapper
-    │   │   ├── structures-demo.tsx   # Client-side mirror demonstrations
-    │   │   └── ui.tsx                # Reusable UI primitives (Card, PageTitle, SectionHeading, Tag)
-    │   ├── algorithms/page.tsx       # Search & Sort exploration with Search & Find banner
-    │   ├── factions/page.tsx         # Faction championship standings, roster, and transfer
-    │   ├── lab/page.tsx              # Search & Find (HTML5 Canvas Game Flow Map, Player Lineups, Score Calculator)
-    │   ├── leaderboard/page.tsx      # Student individual points leaderboard
-    │   ├── my-events/page.tsx        # Student confirmed entries & waiting list queue monitor
-    │   ├── participants/page.tsx     # Student roster & account activation management
-    │   ├── profile/page.tsx          # Student profile, faction badge & event ledger
-    │   ├── results/page.tsx          # Placement-based point scoring & audit log
-    │   ├── schedule/page.tsx         # Venue lane timetable, collision detector & Phase 4 solver
-    │   ├── sports/page.tsx           # Sports catalogue, single enroll & waiting list
-    │   ├── structures/page.tsx       # Operations desk with Search & Find banner
-    │   ├── tournament/page.tsx       # Tournament & game creation/editing
-    │   ├── globals.css               # Design system, CSS variables, and canvas styling
-    │   └── page.tsx                  # ARENA Dashboard (KPIs, ticker, schedule timeline)
-    ├── next.config.ts                # Standalone output & /api proxy to http://127.0.0.1:8000
-    └── tsconfig.json                 # TypeScript strict configuration
-```
+| Phase | Component / Requirement | Backend Source Location | Frontend / Browser UI Location | Real-World Application Use-Case |
+| :--- | :--- | :--- | :--- | :--- |
+| **Phase 1** | **Singly Linked List** | `backend/data_structures/linked_list.py`<br>`backend/data_structures/node.py` | • `/structures` → **"Roster Desk: Participant list"**<br>• `/lab` (Tab 1) → **"Participant Lineup Manager"** | Dynamic student athlete lineup order & scratch withdrawals |
+| **Phase 1** | **Linked List Operations** (Insert, Delete, Traverse) | `backend/data_structures/linked_list.py`<br>`insert_at_start/end/position()`, `delete_by_id/position()` | • `/structures` → **"Add / Remove from practice list"**<br>• `/lab` (Tab 1) → **"Add Athlete (Start/End/Index)"** | Adding athletes to heat lineups, scratching players, rendering linked node arrows (`→`) |
+| **Phase 1** | **Stack using Linked List** | `backend/data_structures/stack.py`<br>`Stack` (`push`, `pop`, `peek`) | • `/structures` → **"Score desk activity"** Card<br>• `/lab` (Tab 1) → **"Activity History & Undo Stack"** | Score desk audit trail, logging recent updates, undoing score entries |
+| **Phase 1** | **Queue using Linked List** | `backend/data_structures/queue.py`<br>`Queue` (`enqueue`, `dequeue`, `peek`) | • `/structures` → **"Player check-in line"** Card<br>• `/lab` (Tab 1) → **"Live Check-In Desk Queue"** | Match arrival desk, calling next waiting athlete, event waiting list |
+| **Phase 1** | **Simple Expression Handling using Stack** | `backend/algorithms/expression_handler.py`<br>`evaluate_simple_expression()` | • `/structures` → **"Points calculator"** Card<br>• `/lab` (Tab 1) → **"Score Formula Calculator"** | Computing complex score adjustments and tie-breaker formulas with stack precedence |
+| **Phase 2** | **Binary Tree for Structured Storage** | `backend/data_structures/tree.py`<br>`TreeNode`, `BinarySearchTree` | • `/structures` → **"Scoreboard review"** Card<br>• `/lab` (Tab 2) → **"Tournament Elimination Bracket"** | Hierarchical knockout bracket structure (Quarters → Semis → Finals) |
+| **Phase 2** | **Tree Traversals** (Inorder, Preorder, Postorder) | `backend/data_structures/tree.py`<br>`inorder()`, `preorder()`, `postorder()` | • `/structures` → **"Scoreboard review → See other views"**<br>• `/lab` (Tab 2) → **"Bracket Tree Match Inspector"** | Low-to-high point sorting (inorder) and hierarchical round serialization |
+| **Phase 2** | **Binary Search Tree (BST)** | `backend/data_structures/tree.py`<br>`insert()`, `contains()`, `delete()` | • `/structures` → **"Scoreboard review: Example lookup"**<br>• `/lab` (Tab 2) → **"Point Search & Extrema Ledger"** | $O(\log n)$ score point lookups and min/max score discovery |
+| **Phase 2** | **Basic Graph Representation** | `backend/data_structures/graph.py`<br>`Graph` (Adjacency List) | • `/structures` → **"Sample venue map"** Card<br>• `/lab` (Tab 2) → **"Interactive Canvas Game Flow Map & Navigator"** | Campus venue connectivity layout (Cricket Ground, Basketball Court, Volleyball Court, Badminton Court, Indoor Sports Complex, Tennis Court, Athletics Track) |
+| **Phase 2** | **Simple Traversal — BFS** | `backend/data_structures/graph.py`<br>`bfs()`, `bfs_detailed()` | • `/structures` → **"Routes between your places"**<br>• `/lab` (Tab 2) → **"Canvas BFS Animated Path Finder & Navigator"** | Shortest path route between campus tournament venues |
+| **Phase 3** | **Linear Search** | `backend/algorithms/search_sort.py`<br>`linear_search()` | • `/algorithms` → **"Participant Search (Linear)"**<br>• `/lab` (Tab 3) → **"Player Finder: Sequential Search"** | Scanning unsorted player lists to verify registrations |
+| **Phase 3** | **Binary Search** | `backend/algorithms/search_sort.py`<br>`binary_search()` | • `/algorithms` → **"Participant Search (Binary)"**<br>• `/lab` (Tab 3) → **"Player Finder: Binary Search Mode"** | $O(\log n)$ instant search of athletes in sorted standings |
+| **Phase 3** | **Merge Sort** | `backend/algorithms/search_sort.py`<br>`merge_sort()` | • `/algorithms` → **"Tournament Standings (Merge Sort)"**<br>• `/lab` (Tab 3) → **"Ranked Standings & Sort Benchmark"** | Stable $O(n \log n)$ ordering of leaderboard points & faction tallies |
+| **Phase 4** | **Greedy Algorithm Technique** | `backend/algorithms/problem_solver.py`<br>`schedule_maximum_matches()` | • `/schedule` → **"Greedy Schedule Optimizer"**<br>• `/lab` (Tab 4) → **"Conflict-Free Event Scheduler"** | Earliest-finish-time interval scheduling to maximize match throughput |
+| **Phase 4** | **Application Flow Integration** | `backend/app.py` (`phase_demo()`)<br>`backend/database.py` | • `/structures` (Operations Desk)<br>• `/schedule` (Venue Timetable Lanes)<br>• `/dashboard` (Live Timeline) | Seamless end-to-end operational pipeline connecting MySQL data to DS algorithms |
+| **Phase 4** | **Testing & Algorithm Demonstration** | `backend/tests/test_phase_requirements.py`<br>`test_arena_extensions.py` | • `/lab` (Full Interactive 4-Tab Suite)<br>• `/structures` (Live Working Demo Desk) | Automated terminal test verification and live interactive browser testing tools |
 
 ---
 
-## 3. Database Schema & Relational Entity Model
+## Detailed Breakdown: Backend & Browser UI Positions
 
-The MySQL persistence layer (`backend/database.py`) operates with foreign key enforcement and transactional rollbacks.
+### Phase 1: Fundamental Linear Data Structures & Expressions
 
-```mermaid
-erDiagram
-    tournaments ||--o{ games : "contains"
-    tournaments ||--o{ results : "tallies"
-    games ||--o{ registrations : "enrolls"
-    games ||--o{ waiting_lists : "queues"
-    games ||--o{ matches : "schedules"
-    users ||--o{ registrations : "participates"
-    users ||--o{ waiting_lists : "waits"
-    users ||--o{ sessions : "authenticates"
-    factions ||--o{ users : "groups"
-    users ||--o{ announcements : "authors"
-
-    tournaments {
-        int id PK
-        varchar name
-        varchar season
-        date starts_on
-        date ends_on
-        text scoring_rules_json
-    }
-    games {
-        int id PK
-        int tournament_id FK
-        varchar name
-        varchar category
-        datetime starts_at
-        varchar venue
-        int capacity
-        int rounds
-    }
-    users {
-        int id PK
-        varchar name
-        varchar username UK
-        varchar email UK
-        varchar faction FK
-        varchar role
-        varchar password_hash
-        boolean is_active
-    }
-    registrations {
-        int id PK
-        int user_id FK
-        int game_id FK
-        datetime created_at
-    }
-    waiting_lists {
-        int id PK
-        int user_id FK
-        int game_id FK
-        datetime joined_at
-    }
-    matches {
-        int id PK
-        int game_id FK
-        varchar team_a
-        varchar team_b
-        varchar score_a
-        varchar score_b
-        varchar status
-        varchar winner
-        datetime scheduled_at
-    }
-    factions {
-        int id PK
-        varchar name UK
-        varchar color
-        varchar motto
-        int points
-    }
-    announcements {
-        int id PK
-        varchar title
-        text content
-        varchar urgency
-        datetime created_at
-    }
-```
-
-### Automated Promotion Engine
-When a student withdraws from a sport via `POST /api/withdraw`:
-1. The student's record is atomically removed from `registrations`.
-2. The waiting list for `game_id` is queried for the earliest queued participant (`ORDER BY joined_at ASC LIMIT 1` acting as a database-backed FIFO Queue).
-3. If a student is waiting, they are immediately enrolled into `registrations` and removed from `waiting_lists`.
-4. The remaining queue positions advance seamlessly without administrative intervention.
+#### 1. Singly Linked List & Basic Operations (Insert, Delete, Traverse)
+- **Backend Source**: `backend/data_structures/linked_list.py` & `backend/data_structures/node.py`
+- **Class**: `LinkedList`, `Node`
+- **Key Methods**: `insert_at_start()`, `insert_at_end()`, `insert_at_position()`, `delete_by_student_id()`, `delete_at_position()`, `delete_by_value()`, `traverse()`, `search()`.
+- **Browser UI Locations**:
+  1. **`/structures` (Game Day Tools → Roster Desk)**:
+     - **Route**: `http://localhost:3000/structures`
+     - **Component**: `<Card className="tools-card">` with section heading **"Participant game choices"**.
+     - **Visual Layout**: Renders an interactive linked node track with visual arrows: `[ATH-101 | Rohan] → [ATH-102 | Priya] → [ATH-103 | Vikram]`.
+     - **Interactive Controls**: Inputs for *Player ID* and *Participant Name*, buttons for **"Add to practice list"**, **"Remove from practice list"**, and **"Review roster order"**.
+  2. **`/lab` (Search & Find Lab → Tab 1: "lineup")**:
+     - **Route**: `http://localhost:3000/lab`
+     - **Tab**: **"Lineups & Desk"** (1st Tab)
+     - **Component**: **"Event Lineups (Singly Linked List)"** panel.
+     - **Interactive Controls**: Allows inserting athletes at Head, Tail, or specific Index, deleting by ID, and moving athletes within the line.
+- **Automated Test**: `PhaseOneTests.test_linked_list_insert_traverse_delete_and_tail_recovery`.
 
 ---
 
-## 4. Syllabus Mapping: Data Structures & Algorithms
-
-### Phase 1: Linear Data Structures & Applications
-
-| Requirement | Implementation File | Python Class / Method | UI Location | Key Features |
-|---|---|---|---|---|
-| **Singly Linked List** | `backend/data_structures/linked_list.py` | `LinkedList` | `/lab?tab=phase1`<br>`/structures` | `insert_at_start()`, `insert_at_end()`, `insert_at_position()`, `delete_by_value()`, `delete_by_student_id()`, `delete_at_position()`, `search()`, `traverse()`. Preserves tail reference for $O(1)$ append. |
-| **Linked Stack** | `backend/data_structures/stack.py` | `Stack` | `/lab?tab=phase1`<br>`/structures` | `push()`, `pop()`, `peek()`, `is_empty()`, `display()`. Pure linked node implementation with LIFO semantics. |
-| **Linked Queue** | `backend/data_structures/queue.py` | `Queue` | `/lab?tab=phase1`<br>`/my-events` | `enqueue()`, `dequeue()`, `peek()`, `get_front()`, `display()`. Maintained with both head and tail pointers for $O(1)$ enqueue and dequeue. |
-| **Expression Evaluator** | `backend/algorithms/expression_handler.py` | `evaluate_expression_detailed()` | `/lab?tab=phase1` | Shunting-Yard Infix to Postfix conversion + Postfix evaluation using custom linked Stack. Tracks operator precedence, associativity, parentheses balancing, unary +/- signs, division-by-zero guards, and outputs a step-by-step trace table. |
-
-### Phase 2: Hierarchical & Graph Structures
-
-| Requirement | Implementation File | Python Class / Method | UI Location | Key Features |
-|---|---|---|---|---|
-| **Binary Tree Bracket** | `backend/data_structures/tree.py` | `TournamentBinaryTree` | `/lab?tab=phase2` | Hierarchical binary tree modeling tournament elimination brackets (Finals $\rightarrow$ Semifinals $\rightarrow$ Quarterfinals). Computes Preorder, Inorder, and Postorder traversals with educational navigation semantics. |
-| **Binary Search Tree** | `backend/data_structures/tree.py` | `BinarySearchTree` | `/lab?tab=phase2` | Full BST implementation with `insert()`, `search()`, `find_min()`, `find_max()`, and complete 3-case `delete()` (Leaf node, Single-child, and Two-child node replaced with in-order successor). |
-| **Graph Adjacency List** | `backend/data_structures/graph.py` | `Graph` | `/lab?tab=phase2`<br>`/structures` | Campus venue topology representation. Implements **BFS using our custom linked Queue**, capturing exact queue state snapshots at each exploration step. Also implements DFS. |
-
-### Phase 3: Searching, Sorting & Complexity Benchmarks
-
-| Requirement | Implementation File | Python Class / Method | UI Location | Key Features |
-|---|---|---|---|---|
-| **Linear Search** | `backend/algorithms/search_sort.py` | `linear_search_detailed()` | `/lab?tab=phase3`<br>`/algorithms` | Step-by-step sequential inspection comparing targets against student rosters. Emits comparison count and index findings. |
-| **Binary Search** | `backend/algorithms/search_sort.py` | `binary_search_detailed()` | `/lab?tab=phase3`<br>`/algorithms` | Logarithmic boundary convergence tracing `low`, `high`, `mid` pointers and narrowing interval bounds until match or empty space. |
-| **Merge Sort** | `backend/algorithms/search_sort.py` | `merge_sort_detailed()` | `/lab?tab=phase3`<br>`/algorithms` | Divide-and-conquer sorting algorithm. Captures recursive tree splitting and two-pointer merged array assembly at every step. Non-mutating and stable. |
-| **Selection Sort** | `backend/algorithms/search_sort.py` | `selection_sort()` | `/algorithms` | In-place minimum extraction algorithm with quadratic comparisons. |
-| **Runtime Benchmarks** | `backend/algorithms/search_sort.py` | `benchmark_search_sort()` | `/lab?tab=phase3` | Microsecond empirical execution timing across array sizes $N = 10, 50, 100, 250, 500$ verifying theoretical asymptotic models. |
-
-### Phase 4: Optimization, Multi-Venue Scheduling & Real-World Integration
-
-| Requirement | Implementation File | Python Class / Method | UI Location | Key Features |
-|---|---|---|---|---|
-| **Greedy Interval Scheduler** | `backend/algorithms/problem_solver.py` | `schedule_tournament_events()` | `/schedule`<br>`/lab?tab=phase4` | Multi-venue Earliest Finish Time (EFT) greedy algorithm. Resolves two dimensions of conflict: (1) venue availability overlap and (2) participant schedule clashes. Emits decision traces for each candidate match. |
-| **Schedule Persistence** | `backend/app.py` | `POST /api/schedule/save-greedily` | `/schedule` | Allows tournament directors to commit greedily optimized schedules directly to MySQL tournament fixture tables. |
-| **Live Match Center** | `backend/app.py`, `database.py` | `POST/PUT /api/matches` | `/live`<br>`/matches` | Real-time score recording, round transitions, and winner declaration with automatic faction points updating. |
+#### 2. Stack using Linked List
+- **Backend Source**: `backend/data_structures/stack.py`
+- **Class**: `Stack` (implemented with singly linked nodes tracking `top`).
+- **Key Methods**: `push(value)`, `pop()`, `peek()`, `is_empty()`, `to_list()`.
+- **Browser UI Locations**:
+  1. **`/structures` (Score Desk Activity)**:
+     - **Route**: `http://localhost:3000/structures`
+     - **Component**: Left card under **"Game-Day Operations"**.
+     - **Visual Layout**: Displays `<div className="stack-card">` with badge **"LATEST UPDATE"** highlighting the top element.
+     - **Interactive Controls**: **"Log a score update"** (`push`) and **"Undo latest update"** (`pop`).
+  2. **`/lab` (Tab 1: "lineup")**:
+     - **Route**: `http://localhost:3000/lab`
+     - **Component**: **"Recent Score Changes & Undo (LIFO Stack)"** widget showing a vertical action card stack with instant pop/push controls.
+- **Automated Test**: `PhaseOneTests.test_linked_stack_is_lifo`.
 
 ---
 
-## 5. Algorithmic Complexity Reference Table
-
-| Data Structure / Algorithm | Operation / Scenario | Best Case Time | Average Case Time | Worst Case Time | Auxiliary Space |
-|---|---|---|---|---|---|
-| **Singly Linked List** | Prepend (`insert_at_start`) | $O(1)$ | $O(1)$ | $O(1)$ | $O(1)$ |
-| | Append (`insert_at_end` with tail) | $O(1)$ | $O(1)$ | $O(1)$ | $O(1)$ |
-| | Positional Insert / Delete | $O(1)$ at head | $O(N)$ | $O(N)$ at tail | $O(1)$ |
-| | Search by Value / ID | $O(1)$ | $O(N)$ | $O(N)$ | $O(1)$ |
-| **Linked Stack** | Push / Pop / Peek | $O(1)$ | $O(1)$ | $O(1)$ | $O(1)$ per op |
-| **Linked Queue** | Enqueue / Dequeue / Peek | $O(1)$ | $O(1)$ | $O(1)$ | $O(1)$ per op |
-| **Shunting-Yard Parser** | Infix $\rightarrow$ Postfix | $O(N)$ | $O(N)$ | $O(N)$ | $O(N)$ |
-| **Postfix Evaluator** | Postfix Expression Evaluation | $O(N)$ | $O(N)$ | $O(N)$ | $O(N)$ |
-| **Binary Search Tree** | Search / Insert / Delete | $O(1)$ (root) | $O(\log N)$ (balanced) | $O(N)$ (skewed) | $O(H)$ recursion |
-| **Binary Tree Traversals** | Inorder / Preorder / Postorder | $O(N)$ | $O(N)$ | $O(N)$ | $O(H)$ stack |
-| **Graph (Adj List)** | Breadth-First Search (BFS) | $O(V + E)$ | $O(V + E)$ | $O(V + E)$ | $O(V)$ queue |
-| | Depth-First Search (DFS) | $O(V + E)$ | $O(V + E)$ | $O(V + E)$ | $O(V)$ recursion |
-| **Linear Search** | Find item in array of size $N$ | $O(1)$ (first item) | $O(N)$ | $O(N)$ (last / absent) | $O(1)$ |
-| **Binary Search** | Find item in sorted array | $O(1)$ (mid item) | $O(\log N)$ | $O(\log N)$ | $O(1)$ iterative |
-| **Merge Sort** | Sort array of size $N$ | $O(N \log N)$ | $O(N \log N)$ | $O(N \log N)$ | $O(N)$ merge buffer |
-| **Selection Sort** | Sort array of size $N$ | $O(N^2)$ | $O(N^2)$ | $O(N^2)$ | $O(1)$ in-place |
-| **Greedy Scheduler** | Sort intervals + EFT greedy pass | $O(M \log M)$ | $O(M \log M)$ | $O(M \log M)$ | $O(M)$ |
-
-*Where $N$ = elements, $V$ = vertices, $E$ = edges, $H$ = tree height, $M$ = match candidate intervals.*
+#### 3. Queue using Linked List
+- **Backend Source**: `backend/data_structures/queue.py`
+- **Class**: `Queue` (singly linked nodes tracking both `front` and `rear` pointers).
+- **Key Methods**: `enqueue(value)`, `dequeue()`, `peek()`, `is_empty()`, `to_list()`.
+- **Browser UI Locations**:
+  1. **`/structures` (Player Check-In Line)**:
+     - **Route**: `http://localhost:3000/structures`
+     - **Component**: Right card under **"Game-Day Operations"**.
+     - **Visual Layout**: `<div className="queue-card">` with badge **"UP NEXT"** showing the front player.
+     - **Interactive Controls**: Input field for *Player or team name*, button **"Join check-in line"** (`enqueue`), and button **"Call next player"** (`dequeue`).
+  2. **`/lab` (Tab 1: "lineup")**:
+     - **Route**: `http://localhost:3000/lab`
+     - **Component**: **"Live Check-In Desk (FIFO Queue)"** card displaying the queue depth badge, next called athlete card, and waiting lineup queue chips.
+- **Automated Test**: `PhaseOneTests.test_linked_queue_is_fifo_and_recovers_after_empty`.
 
 ---
 
-## 6. Technical Defense & Viva Voce Q&A
-
-### Q1: Why use custom linked nodes for Stack and Queue instead of Python's built-in `list`?
-**Answer:** A Python `list` is implemented internally as a dynamic contiguous array (`std::vector`-like in CPython). Calling `list.pop(0)` or `list.insert(0, val)` requires shifting all remaining elements in memory, yielding $O(N)$ time complexity. In contrast, our custom `Node`-based `Queue` maintains explicit `_front` and `_rear` references, allowing `enqueue()` and `dequeue()` in guaranteed $O(1)$ time regardless of scale. Similarly, our `Stack` prepends to the linked chain for guaranteed $O(1)$ `push()` and `pop()`.
-
-### Q2: How does the Shunting-Yard algorithm handle operator precedence and associativity?
-**Answer:** The Shunting-Yard algorithm processes tokens from left to right. When an operator $op_1$ arrives, operators on the stack $op_2$ are popped to output if they have higher precedence, or equal precedence with left-associativity. Left parenthesis `(` is pushed unconditionally to establish an evaluation frame. When `)` is encountered, the stack is popped to output until the matching `(` is discarded. Unary negation (`-5`) is detected by inspecting preceding token state and evaluated via a high-precedence unary modifier.
-
-### Q3: How is node deletion handled in a Binary Search Tree when the node has two children?
-**Answer:** When deleting a node $Z$ with two children:
-1. We locate $Z$'s **in-order successor** $Y$ (the node with the minimum key in $Z$'s right subtree: `y = self._find_min(node.right)`).
-2. $Y$ is guaranteed to have at most one child (a right child), because if it had a left child, that left child would be smaller and thus would have been the successor instead.
-3. We copy $Y$'s key and value into $Z$.
-4. We recursively delete $Y$ from the right subtree: `node.right = self._delete(node.right, successor.key)`. This reduces the problem to Case 1 (leaf) or Case 2 (single child).
-
-### Q4: Why must BFS use a Queue, and what happens if a Stack is used instead?
-**Answer:** BFS discovers vertices in order of their shortest-path distance (edge count) from the root. Because a Queue enforces First-In, First-Out (FIFO) ordering, all vertices at depth $d$ are enqueued and processed before any vertices at depth $d+1$. If a Stack (LIFO) were substituted for the Queue, the search would greedily follow the most recently discovered neighbor to maximum depth, transforming the traversal into Depth-First Search (DFS).
-
-### Q5: Why is Merge Sort preferred over Quicksort in this tournament system?
-**Answer:** Merge Sort provides a guaranteed worst-case time complexity of $O(N \log N)$ and is **stable** (equal keys retain their original input order). In tournament standings, stability ensures that if two competitors have identical points, their tie-break or initial qualification order is strictly preserved. Quicksort has an $O(N^2)$ worst-case running time on pathological inputs and standard implementations are not stable.
-
-### Q6: What is the Greedy Choice Property in your Phase 4 Tournament Scheduler?
-**Answer:** The problem is modeled as the **Interval Scheduling Problem**. To maximize the number of non-overlapping fixtures in a shared venue, the optimal greedy choice is to always select the compatible fixture with the **Earliest Finish Time (EFT)**. Sorting by finish time leaves the maximum possible remaining time in the day for subsequent matches. Mathematically, it is proven by induction that the greedy schedule "stays ahead" of any other feasible schedule at every step.
-
-### Q7: How does your system handle concurrent waiting lists and prevent double-booking?
-**Answer:** 
-1. Database integrity is preserved via atomic transactions (`connection.start_transaction()` / `commit()` / `rollback()`).
-2. Event enrollment performs an atomic verification: `SELECT COUNT(*) FROM registrations WHERE game_id=%s` compared against `capacity`. If full, it prompts enrollment to `waiting_lists`.
-3. In `withdraw_from_game()`, the earliest queued student is selected with `ORDER BY joined_at ASC LIMIT 1`, moved to `registrations`, and purged from `waiting_lists` within the same database transaction.
-
-### Q8: What security protections are implemented on the REST API?
-**Answer:**
-- **Origin Validation**: `require_trusted_origin()` enforces that mutating HTTP verbs (`POST`, `PUT`, `DELETE`) originate solely from authorized local frontend ports (`http://localhost:3000`, `http://127.0.0.1:3000`).
-- **Session Authentication**: State is secured via HttpOnly, SameSite=Lax cookies with SHA-256 hashed database session tokens.
-- **Password Salting & Hashing**: Passwords are protected using `hashlib.pbkdf2_hmac("sha256")` with cryptographically random 16-byte salts and 240,000 hashing iterations.
-- **Role-Based Access Control**: Sensitive actions (result recording, match scoring, tournament deletion) strictly verify `u["role"] == "admin"`.
-
-### Q9: What happens when an invalid expression like `5 / 0` or `(3 + 4 *` is provided?
-**Answer:** The parser rejects malformed inputs prior to calculation. `(3 + 4 *` is detected by the paren-balancing pass or EOF flush operator arity check, throwing an informative error (`"Mismatched parentheses or dangling operator"`). For `5 / 0`, the postfix evaluator inspects the right operand during division and raises a `ZeroDivisionError: "Division by zero is undefined"`.
-
-### Q10: How does the front-end communicate with the Python backend?
-**Answer:** Next.js uses server-side rewrites configured in `frontend/next.config.ts`:
-```typescript
-async rewrites() {
-  return [
-    { source: "/api/:path*", destination: "http://127.0.0.1:8000/api/:path*" }
-  ];
-}
-```
-All browser fetch calls target relative `/api/*` endpoints. Next.js transparently proxies these to the Python backend running on port 8000 while maintaining cookie session scopes.
+#### 4. Simple Expression Handling using Stack
+- **Backend Source**: `backend/algorithms/expression_handler.py`
+- **Functions**: `evaluate_simple_expression()`, `evaluate_expression_detailed()`.
+- **Browser UI Locations**:
+  1. **`/structures` (Points Calculator)**:
+     - **Route**: `http://localhost:3000/structures`
+     - **Component**: Card with heading **"Points calculator"** under the **"SCORE DESK"** section.
+     - **Visual Layout**: Input field prefilled with sample expression (e.g., `1200 + 40 * 2`), button **"Calculate"**, and formatted answer badge.
+  2. **`/lab` (Tab 1: "lineup")**:
+     - **Route**: `http://localhost:3000/lab`
+     - **Component**: **"Tournament Score Calculator (Shunting-Yard & Stack)"** panel.
+     - **Visual Layout**: Includes formula input presets (`(3 * 3) + 1`, `100 - (15 * 4)`), calculates dynamically via `POST /api/expression`, and displays step-by-step token and stack evaluation traces.
+- **Automated Test**: `PhaseOneTests.test_stack_based_expression_evaluation`.
 
 ---
 
-## 7. How to Run, Test and Deploy
+### Phase 2: Hierarchical Trees & Graph Structures
 
-### Local Development Setup
+#### 1. Binary Tree for Structured Storage & BST
+- **Backend Source**: `backend/data_structures/tree.py`
+- **Classes**: `TreeNode`, `BinarySearchTree`, `TournamentBinaryTree`.
+- **Key Methods**: `insert()`, `contains()`, `delete()`, `find_min()`, `find_max()`.
+- **Browser UI Locations**:
+  1. **`/structures` (Scoreboard Review)**:
+     - **Route**: `http://localhost:3000/structures`
+     - **Component**: Right card under **"SCORE DESK"** section.
+     - **Visual Layout**: Shows points ordered from low to high (`inorder()`), and example lookup search status (`Found / Did not find`).
+  2. **`/lab` (Tab 2: "bracket")**:
+     - **Route**: `http://localhost:3000/lab`
+     - **Tab**: **"Brackets & Venues"** (2nd Tab)
+     - **Component**: **"Tournament Elimination Bracket (Binary Tree)"** rendering knockout tree rounds (Quarterfinals → Semifinals → Championship Final).
+- **Automated Test**: `PhaseTwoTests.test_bst_storage_traversals_and_search`.
 
-1. **Start Python Backend**:
-   ```powershell
-   cd backend
-   venv\Scripts\python.exe app.py
-   # Server listens on http://127.0.0.1:8000
-   ```
+---
 
-2. **Start Next.js Frontend**:
-   ```powershell
-   cd frontend
-   npm run dev
-   # Server listens on http://localhost:3000
-   ```
+#### 2. Tree Traversals (Inorder, Preorder, Postorder)
+- **Backend Source**: `backend/data_structures/tree.py`
+- **Methods**: `inorder()`, `preorder()`, `postorder()`.
+- **Browser UI Locations**:
+  1. **`/structures` (Scoreboard Review Details)**:
+     - **Route**: `http://localhost:3000/structures`
+     - **Component**: Expandable `<details className="tools-details">` inside **"Scoreboard review"**.
+     - **Visual Display**:
+       - **Inorder**: *Low to high point values*
+       - **Preorder**: *Start at each parent first*
+       - **Postorder**: *Visit children before parent*
+  2. **`/lab` (Tab 2: "bracket")**:
+     - **Route**: `http://localhost:3000/lab`
+     - **Component**: Traversal chips showing pre-order match hierarchy and post-order result completion.
+- **Automated Test**: `PhaseTwoTests.test_bst_storage_traversals_and_search`.
 
-3. **Open Portal**:
-   - URL: `http://localhost:3000`
-   - Default Administrator Credentials:
-     - Username: `admin1`
-     - Password: `Din@pr@bh@7012760095`
+---
 
-### Automated Test Suite Execution
-Execute all 33 unit tests:
-```powershell
-cd backend
-venv\Scripts\python.exe -m unittest discover -s tests -v
-```
-*Expected Output: `Ran 33 tests in 0.450s — OK`*
+#### 3. Basic Graph Representation & Simple Traversal (BFS)
+- **Backend Source**: `backend/data_structures/graph.py`
+- **Class**: `Graph` (Adjacency List with `bfs()`, `bfs_detailed()`, `dfs()`).
+- **Browser UI Locations**:
+  1. **`/structures` (Sample Venue Map)**:
+     - **Route**: `http://localhost:3000/structures`
+     - **Component**: Card under **"EVENT SPACES: Plan movement around the venue"**.
+     - **Visual Layout**: CSS node-and-edge layout linking the 7 official venues: `Cricket Ground`, `Basketball Court`, `Volleyball Court`, `Badminton Court`, `Indoor Sports Complex`, `Tennis Court`, and `Athletics Track`.
+     - **Interactive Controls**: Dropdown selects for *Starting place* and *Destination*, which dynamically compute and render all BFS shortest routes and alternative routes.
+  2. **`/lab` (Tab 2: "bracket")**:
+     - **Route**: `http://localhost:3000/lab`
+     - **Tab**: **"Brackets & Venues"** (2nd Tab)
+     - **Component**: **"Interactive Campus Game Flow Map & Navigator"** featuring an **HTML5 `<canvas>`** drawing venue nodes, active match lines, and an interactive BFS Route Navigator calculating and animating shortest paths between origin and destination grounds.
+- **Automated Test**: `PhaseTwoTests.test_graph_adjacency_list_bfs_dfs_and_directed_edges`.
 
-### Frontend Production Validation
-```powershell
-cd frontend
-npx tsc --noEmit
-npm run build
-```
-*Expected Output: `✓ Compiled successfully ... ✓ Generating static pages (22/22)`*
+---
+
+### Phase 3: Searching & Sorting Algorithms
+
+#### 1. Linear Search & Binary Search
+- **Backend Source**: `backend/algorithms/search_sort.py`
+- **Functions**: `linear_search()`, `linear_search_detailed()`, `binary_search()`, `binary_search_detailed()`.
+- **Browser UI Locations**:
+  1. **`/algorithms` (Search & Find Operations)**:
+     - **Route**: `http://localhost:3000/algorithms`
+     - **Component**: **"Find student athletes"** card.
+     - **Interactive Controls**: Text input for student query, method selector buttons for **"Linear search (O(n))"** and **"Binary search (O(log n))"**, and a **"Find athlete"** action button.
+     - **Visual Result**: Displays search result card, comparisons count, and execution time.
+  2. **`/lab` (Tab 3: "finder")**:
+     - **Route**: `http://localhost:3000/lab`
+     - **Tab**: **"Player Finder & Standings"** (3rd Tab)
+     - **Component**: **"Athlete Search Comparison Desk"** with side-by-side execution comparison between Linear Search and Binary Search, highlighting index match positions.
+- **Automated Test**: `PhaseThreeTests.test_linear_and_binary_search`.
+
+---
+
+#### 2. Merge Sort
+- **Backend Source**: `backend/algorithms/search_sort.py`
+- **Functions**: `merge_sort()`, `merge_sort_detailed()`, `selection_sort()`, `benchmark_search_sort()`.
+- **Browser UI Locations**:
+  1. **`/algorithms` (Tournament Standings Sorter)**:
+     - **Route**: `http://localhost:3000/algorithms`
+     - **Component**: **"Sort tournament standings"** card.
+     - **Interactive Controls**: Buttons to toggle between **"Merge sort (stable, O(n log n))"** and **"Selection sort (O(n²))"**.
+     - **Visual Display**: Renders ordered athlete standings with badges for points, faction, and rank.
+  2. **`/lab` (Tab 3: "finder")**:
+     - **Route**: `http://localhost:3000/lab`
+     - **Tab**: **"Player Finder & Standings"** (3rd Tab)
+     - **Component**: **"Faction & Athlete Ranked Standings"** with a **"Run Merge Sort (O(N log N))"** button, sorted podium cards, and runtime benchmark comparison.
+- **Automated Test**: `PhaseThreeTests.test_selection_and_merge_sorts_are_correct_and_non_mutating`.
+
+---
+
+### Phase 4: Applied Problem Solving, Integration & Demonstration
+
+#### 1. Greedy Technique Implementation
+- **Backend Source**: `backend/algorithms/problem_solver.py`
+- **Functions**: `schedule_maximum_matches()`, `schedule_tournament_events()`.
+- **Algorithm**: Earliest Finish Time Greedy Interval Scheduling.
+- **Browser UI Locations**:
+  1. **`/schedule` (Venue Lane Timetable & Conflict Solver)**:
+     - **Route**: `http://localhost:3000/schedule`
+     - **Component**: **"Schedule Optimizer & Conflict Resolution"** banner and timetable lane renderer.
+     - **Visual Display**: Visualizes match time blocks across Court 1, Court 2, Stadium, and Track. Overlapping conflicts are flagged and resolved by the greedy scheduler.
+  2. **`/lab` (Tab 4: "schedule")**:
+     - **Route**: `http://localhost:3000/lab`
+     - **Tab**: **"Schedule Optimizer"** (4th Tab)
+     - **Component**: **"Conflict-Free Match Scheduler (Greedy Algorithm)"** panel.
+     - **Interactive Controls**: Button **"Optimize Today's Fixtures (Greedy Selection)"**, which executes `schedule_maximum_matches()` via `POST /api/schedule/solve` and renders non-overlapping match cards.
+- **Automated Test**: `PhaseFourTests.test_greedy_scheduler_selects_maximum_compatible_intervals`.
+
+---
+
+#### 2. Application Flow Integration
+- **Backend Source**: `backend/app.py` (`phase_demo()`), `backend/database.py` (`_check_venue_conflict()`).
+- **REST Endpoints**:
+  - `GET /api/demo`: Returns bundled state of all custom structures for the frontend.
+  - `POST /api/schedule/solve`: Runs the greedy interval scheduler on match intervals.
+  - `POST /api/expression`: Evaluates formulas via the stack calculator.
+  - `POST /api/search`: Executes linear/binary search over participant records.
+  - `POST /api/sort`: Executes merge/selection sort over standings.
+- **Browser UI Locations**:
+  - **`/structures`**: Connected to `/api/demo` to hydrate Linked List, Stack, Queue, Tree, and Graph states.
+  - **`/lab`**: Master interactive hub accessing all 4 phase endpoints simultaneously.
+  - **`/schedule`**: Connected to `/api/schedule/solve` for dynamic match rescheduling.
+- **Automated Test**: `PhaseFourTests.test_application_demo_integrates_structures_without_mysql`.
+
+---
+
+#### 3. Final Testing & Interactive Demonstrations
+- **Automated Terminal Execution**:
+  ```powershell
+  # Run all 33 Phase 1-4 tests
+  .\backend\venv\Scripts\python.exe -m unittest discover -s backend/tests -v
+  ```
+- **Browser Demonstration Guide**:
+  - **`/lab`**: Complete interactive showcase demonstrating:
+    - *Tab 1*: Linked List manipulation, Check-in Queue, Stack calculator with token trace.
+    - *Tab 2*: HTML5 Canvas Graph BFS path animation and Binary Bracket Tree.
+    - *Tab 3*: Linear Search vs Binary Search comparison & Merge Sort standings.
+    - *Tab 4*: Greedy Interval Scheduler maximizing non-overlapping matches.
+  - **`/structures`**: Operational game day desk with working Stack, Queue, Linked List, BST traversals, and Graph path routes.
+  - **`/algorithms`**: Standalone educational desk for search and sort runtime comparisons.
+  - **`/schedule`**: Production multi-venue match scheduling timetable.

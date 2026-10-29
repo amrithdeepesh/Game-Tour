@@ -8,7 +8,6 @@ import secrets
 import threading
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
-
 import mysql.connector
 from mysql.connector import errorcode
 
@@ -290,10 +289,11 @@ LIMIT 1""")
         username = os.getenv("ADMIN_USERNAME", "").strip().lower()
         password = os.getenv("ADMIN_PASSWORD", "")
         if username or password:
-            if len(username) < 3 or len(password) < 12:
+            if len(username) < 3 or len(password) < 8:
                 raise RuntimeError(
-                    "Set both ADMIN_USERNAME and a strong ADMIN_PASSWORD (at least 12 characters) in backend/.env."
+                    "Set both ADMIN_USERNAME and a strong ADMIN_PASSWORD (at least 8 characters) in backend/.env."
                 )
+
             salt = secrets.token_bytes(16)
             digest = hashlib.pbkdf2_hmac(
                 "sha256", password.encode(), salt, 240000
@@ -957,8 +957,34 @@ ORDER BY u.is_active DESC,
          u.display_name""")
 
 
+def delete_student_account(uid):
+    init()
+    c = connect()
+    try:
+        cur = c.cursor()
+        cur.execute("SELECT role FROM users WHERE id=%s", (uid,))
+        row = cur.fetchone()
+        if not row:
+            raise ValueError("This participant no longer exists.")
+        if row[0] == "admin":
+            raise ValueError("Administrator accounts cannot be removed.")
+
+        cur.execute("DELETE FROM sessions WHERE user_id=%s", (uid,))
+        cur.execute("DELETE FROM waiting_lists WHERE user_id=%s", (uid,))
+        cur.execute("DELETE FROM game_choices WHERE user_id=%s", (uid,))
+        cur.execute("DELETE FROM results WHERE participant_id=%s", (uid,))
+        cur.execute("UPDATE matches SET participant1_id=NULL WHERE participant1_id=%s", (uid,))
+        cur.execute("UPDATE matches SET participant2_id=NULL WHERE participant2_id=%s", (uid,))
+        cur.execute("UPDATE matches SET winner_id=NULL WHERE winner_id=%s", (uid,))
+        cur.execute("UPDATE announcements SET author_id=NULL WHERE author_id=%s", (uid,))
+        cur.execute("DELETE FROM users WHERE id=%s AND role='student'", (uid,))
+        c.commit()
+    finally:
+        c.close()
+
+
 def delete_participant(uid):
-    set_participant_active(uid, False)
+    delete_student_account(uid)
 
 
 def set_participant_active(uid, active):

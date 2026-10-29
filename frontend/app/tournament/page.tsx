@@ -5,6 +5,16 @@ import {CalendarDays,MapPin,Pencil,Plus,Trash2,Users,X,Medal} from "lucide-react
 import {api,useRole} from "../components/role";
 import {Card,PageTitle,SectionHeading,Tag} from "../components/ui";
 type Tournament={id:number;name:string;description:string;game_count:number;registration_closes_at:string|null;points_first:number;points_second:number;points_third:number;points_participation:number};
+const ALLOWED_VENUES = [
+  "Cricket Ground",
+  "Basketball Court",
+  "Volleyball Court",
+  "Badminton Court",
+  "Indoor Sports Complex",
+  "Tennis Court",
+  "Athletics Track",
+] as const;
+
 type Game={id:number;tournament_id:number;name:string;tournament:string;starts_at:string;venue:string;enrolled:number;capacity:number;rounds:number;duration_minutes:number};
 const blankTournament={name:"",description:"",registration_closes_at:"",points_first:"10",points_second:"7",points_third:"5",points_participation:"1"};
 const blankGame={tournament_id:"",name:"",starts_at:"",venue:"",capacity:"20",rounds:"1",duration_minutes:"60"};
@@ -31,7 +41,7 @@ export default function TournamentPage(){
  <Card className="form-card"><SectionHeading title="Add / edit a game"/> {tournaments.length?<form className="stack-form" onSubmit={saveGame}>
  <label>Tournament<select required value={gameForm.tournament_id} onChange={e=>setGameForm({...gameForm,tournament_id:e.target.value})}>{tournaments.map(t=><option key={t.id} value={t.id}>{t.name}</option>)}</select></label>
  <label>Game name<input required maxLength={100} value={gameForm.name} onChange={e=>setGameForm({...gameForm,name:e.target.value})}/></label>
- <div className="form-two"><label>Date and time<input required type="datetime-local" value={gameForm.starts_at} onChange={e=>setGameForm({...gameForm,starts_at:e.target.value})}/></label><label>Place<input required maxLength={160} value={gameForm.venue} onChange={e=>setGameForm({...gameForm,venue:e.target.value})}/></label></div>
+ <div className="form-two"><label>Date and time<input required type="datetime-local" value={gameForm.starts_at} onChange={e=>setGameForm({...gameForm,starts_at:e.target.value})}/></label><label>Place (Location)<select required value={gameForm.venue} onChange={e=>setGameForm({...gameForm,venue:e.target.value})}><option value="">Select location</option>{ALLOWED_VENUES.map(v=><option key={v} value={v}>{v}</option>)}</select></label></div>
  <div className="form-two"><label>Participant limit<input required type="number" min={editingGame?games.find(g=>g.id===editingGame)?.enrolled||1:1} max="5000" value={gameForm.capacity} onChange={e=>setGameForm({...gameForm,capacity:e.target.value})}/></label><label>Duration in minutes<input required type="number" min="5" max="1440" value={gameForm.duration_minutes} onChange={e=>setGameForm({...gameForm,duration_minutes:e.target.value})}/></label></div>
  <label>Number of rounds<input required type="number" min="1" max="20" value={gameForm.rounds} onChange={e=>setGameForm({...gameForm,rounds:e.target.value})}/></label>
  <div className="form-actions"><button className="button primary-button"><Plus size={16}/>{editingGame?"Save game":"Add to schedule"}</button>{editingGame&&<button type="button" className="button secondary-button" onClick={()=>{setEditingGame(null);setGameForm(blankGame)}}><X size={16}/>Cancel</button>}</div></form>:<p>Create a tournament first, then add games.</p>}</Card></div>

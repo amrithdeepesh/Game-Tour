@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import {
+  ArrowLeftRight,
   ArrowRight,
   Award,
   CalendarDays,
@@ -13,6 +14,7 @@ import {
   Layers,
   MapPin,
   Medal,
+  Navigation,
   Play,
   RotateCcw,
   Search,
@@ -68,14 +70,16 @@ export default function SearchAndFind() {
   // Tab 2: Bracket & Game Flow Canvas State
   const [bracketData, setBracketData] = useState<any>(null);
   const [selectedVenue, setSelectedVenue] = useState<any>({
-    name: "Arena Main Stadium",
-    sport: "Football & Championship Finals",
-    match: "Grand Finals: Falcons vs Tigers",
-    status: "Active Match Ground",
-    players: "Rohan Verma, Vikram Malhotra, Alex Chen",
+    name: "Indoor Sports Complex",
+    sport: "Multi-Sport Hub & Grand Finals",
+    match: "ARENA 2026 Grand Championship",
+    status: "Central Campus Hub",
+    players: "All Faction Finalists",
     capacity: "5,000 Spectators",
   });
-  const [canvasMode, setCanvasMode] = useState<"normal" | "finals_path" | "all_active">("normal");
+  const [canvasMode, setCanvasMode] = useState<"normal" | "finals_path" | "all_active" | "navigator">("navigator");
+  const [navStart, setNavStart] = useState("Indoor Sports Complex");
+  const [navEnd, setNavEnd] = useState("Cricket Ground");
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
 
   // Tab 3: Player Finder & Standings State
@@ -189,8 +193,64 @@ export default function SearchAndFind() {
   }
 
   // ----------------------------------------------------
-  // Tab 2: HTML5 Canvas Game Flow Map
+  // Tab 2: HTML5 Canvas Game Flow Map & Navigator
   // ----------------------------------------------------
+  const CAMPUS_VENUES = [
+    { id: "cricket", name: "Cricket Ground", x: 170, y: 110, sport: "Cricket Championship", color: "#e2b366", players: "Tigers vs Falcons", match: "T20 Derby Match", status: "Active Ground", capacity: "3,500 Spectators" },
+    { id: "basketball", name: "Basketball Court", x: 430, y: 70, sport: "Basketball 3v3 & 5v5", color: "#e86363", players: "Vikram Malhotra, Alex Chen", match: "Semifinals: Sharks vs Eagles", status: "Ongoing Fixture", capacity: "1,200 Spectators" },
+    { id: "volleyball", name: "Volleyball Court", x: 690, y: 110, sport: "Volleyball Tournament", color: "#8a70d3", players: "Maya Patel, Kabir Singh", match: "Quarter-Finals", status: "Active Ground", capacity: "800 Spectators" },
+    { id: "badminton", name: "Badminton Court", x: 690, y: 350, sport: "Badminton Singles & Doubles", color: "#d09b48", players: "Priya Sharma vs Sneha Nair", match: "Championship Round 2", status: "Active Ground", capacity: "600 Spectators" },
+    { id: "indoor", name: "Indoor Sports Complex", x: 430, y: 230, sport: "Multi-Sport Hub & Grand Finals", color: "#596fe0", players: "All Faction Finalists", match: "ARENA 2026 Grand Championship", status: "Central Campus Hub", capacity: "5,000 Spectators" },
+    { id: "tennis", name: "Tennis Court", x: 430, y: 390, sport: "Tennis Open Championship", color: "#2bbbad", players: "Diya Menon, Rohan Shah", match: "Finals Decider", status: "Active Ground", capacity: "900 Spectators" },
+    { id: "athletics", name: "Athletics Track", x: 170, y: 350, sport: "Track & Field Sprints & Relays", color: "#2fa879", players: "Aarav Nair, Ishan Kapoor", match: "100m & 4x100m Heats", status: "Active Ground", capacity: "2,000 Spectators" },
+  ];
+
+  const CAMPUS_ROUTES = [
+    { from: 4, to: 0 }, // Indoor <-> Cricket Ground
+    { from: 4, to: 1 }, // Indoor <-> Basketball Court
+    { from: 4, to: 2 }, // Indoor <-> Volleyball Court
+    { from: 4, to: 3 }, // Indoor <-> Badminton Court
+    { from: 4, to: 5 }, // Indoor <-> Tennis Court
+    { from: 4, to: 6 }, // Indoor <-> Athletics Track
+    { from: 0, to: 6 }, // Cricket <-> Athletics Track
+    { from: 1, to: 2 }, // Basketball <-> Volleyball
+    { from: 2, to: 3 }, // Volleyball <-> Badminton
+    { from: 3, to: 5 }, // Badminton <-> Tennis
+    { from: 6, to: 5 }, // Athletics <-> Tennis
+  ];
+
+  function getBfsPath(startName: string, endName: string): number[] {
+    const sIdx = CAMPUS_VENUES.findIndex((v) => v.name === startName);
+    const eIdx = CAMPUS_VENUES.findIndex((v) => v.name === endName);
+    if (sIdx === -1 || eIdx === -1) return [];
+    if (sIdx === eIdx) return [sIdx];
+
+    const adj: number[][] = CAMPUS_VENUES.map(() => []);
+    for (const r of CAMPUS_ROUTES) {
+      adj[r.from].push(r.to);
+      adj[r.to].push(r.from);
+    }
+
+    const queue: number[][] = [[sIdx]];
+    const visited = new Set<number>([sIdx]);
+
+    while (queue.length > 0) {
+      const path = queue.shift()!;
+      const node = path[path.length - 1];
+      if (node === eIdx) return path;
+
+      for (const neighbor of adj[node]) {
+        if (!visited.has(neighbor)) {
+          visited.add(neighbor);
+          queue.push([...path, neighbor]);
+        }
+      }
+    }
+    return [];
+  }
+
+  const currentBfsRoute = getBfsPath(navStart, navEnd);
+
   useEffect(() => {
     if (activeTab !== "bracket") return;
     const canvas = canvasRef.current;
@@ -201,30 +261,26 @@ export default function SearchAndFind() {
     let animationFrameId: number;
     let particleOffset = 0;
 
-    const venues = [
-      { id: "stadium", name: "Arena Main Stadium", x: 420, y: 190, sport: "Football & Grand Finals", active: true, color: "#596fe0", players: "Falcons vs Tigers" },
-      { id: "track", name: "Track & Field Grounds", x: 140, y: 150, sport: "100m, 400m & Relay Heats", active: true, color: "#2fa879", players: "Rohan Verma, Priya Sharma" },
-      { id: "hall", name: "Activity & Check-In Hall", x: 140, y: 330, sport: "Registration, Chess & Carrom", active: true, color: "#8a70d3", players: "Maya Patel, Kabir Singh" },
-      { id: "court1", name: "Indoor Court 1", x: 700, y: 140, sport: "Badminton Championship", active: true, color: "#d09b48", players: "Priya Sharma vs Sneha Nair" },
-      { id: "court2", name: "Indoor Court 2", x: 700, y: 320, sport: "Basketball & Table Tennis", active: true, color: "#e86363", players: "Vikram Malhotra, Alex Chen" },
-      { id: "podium", name: "Podium of Champions", x: 420, y: 370, sport: "Medal Ceremony & Trophies", active: false, color: "#f0ca8c", players: "Tournament Champions" },
-    ];
+    const venues = CAMPUS_VENUES;
+    const routes = CAMPUS_ROUTES;
+    const navRoute = getBfsPath(navStart, navEnd);
 
-    const routes = [
-      { from: 0, to: 1 },
-      { from: 0, to: 2 },
-      { from: 0, to: 3 },
+    function isEdgeInNav(from: number, to: number) {
+      for (let i = 0; i < navRoute.length - 1; i++) {
+        const a = navRoute[i];
+        const b = navRoute[i + 1];
+        if ((a === from && b === to) || (a === to && b === from)) return true;
+      }
+      return false;
+    }
+
+    const finalsEdges = [
       { from: 0, to: 4 },
-      { from: 0, to: 5 },
-      { from: 1, to: 2 },
+      { from: 6, to: 4 },
+      { from: 1, to: 4 },
+      { from: 2, to: 4 },
       { from: 3, to: 4 },
-      { from: 4, to: 5 },
-    ];
-
-    const finalsPath = [
-      { from: 2, to: 0 },
-      { from: 0, to: 3 },
-      { from: 0, to: 5 },
+      { from: 5, to: 4 },
     ];
 
     function render() {
@@ -249,18 +305,25 @@ export default function SearchAndFind() {
       routes.forEach((route) => {
         const v1 = venues[route.from];
         const v2 = venues[route.to];
+        const inNav = canvasMode === "navigator" && isEdgeInNav(route.from, route.to);
         const isFinalsRoute =
           canvasMode === "finals_path" &&
-          finalsPath.some(
+          finalsEdges.some(
             (p) => (p.from === route.from && p.to === route.to) || (p.from === route.to && p.to === route.from)
           );
+
+        const isHighlighted = inNav || isFinalsRoute;
 
         ctx.beginPath();
         ctx.moveTo(v1.x, v1.y);
         ctx.lineTo(v2.x, v2.y);
-        ctx.strokeStyle = isFinalsRoute ? "#596fe0" : "rgba(140, 160, 190, 0.28)";
-        ctx.lineWidth = isFinalsRoute ? 4 : 2;
-        if (isFinalsRoute) {
+        ctx.strokeStyle = inNav
+          ? "#596fe0"
+          : isFinalsRoute
+          ? "#e2b366"
+          : "rgba(140, 160, 190, 0.22)";
+        ctx.lineWidth = isHighlighted ? 4 : 1.8;
+        if (isHighlighted) {
           ctx.setLineDash([8, 4]);
         } else {
           ctx.setLineDash([]);
@@ -271,36 +334,44 @@ export default function SearchAndFind() {
         const dx = v2.x - v1.x;
         const dy = v2.y - v1.y;
         const dist = Math.sqrt(dx * dx + dy * dy);
-        const t = ((particleOffset % dist) / dist);
+        const t = (particleOffset % dist) / dist;
         const px = v1.x + dx * t;
         const py = v1.y + dy * t;
 
         ctx.beginPath();
-        ctx.arc(px, py, isFinalsRoute ? 4 : 2.5, 0, Math.PI * 2);
-        ctx.fillStyle = isFinalsRoute ? "#596fe0" : "rgba(89, 111, 224, 0.6)";
-        ctx.shadowColor = "#596fe0";
-        ctx.shadowBlur = isFinalsRoute ? 8 : 4;
+        ctx.arc(px, py, isHighlighted ? 4 : 2, 0, Math.PI * 2);
+        ctx.fillStyle = inNav
+          ? "#596fe0"
+          : isFinalsRoute
+          ? "#e2b366"
+          : "rgba(89, 111, 224, 0.4)";
+        ctx.shadowColor = inNav ? "#596fe0" : "#e2b366";
+        ctx.shadowBlur = isHighlighted ? 8 : 0;
         ctx.fill();
         ctx.shadowBlur = 0;
       });
 
       venues.forEach((v) => {
         const isSelected = selectedVenue?.name === v.name;
+        const isStart = canvasMode === "navigator" && navStart === v.name;
+        const isEnd = canvasMode === "navigator" && navEnd === v.name;
+        const inNavPath = canvasMode === "navigator" && navRoute.some((idx) => venues[idx].name === v.name);
 
-        if (isSelected || canvasMode === "all_active") {
+        if (isSelected || canvasMode === "all_active" || isStart || isEnd || inNavPath) {
           ctx.beginPath();
           ctx.arc(v.x, v.y, 34, 0, Math.PI * 2);
-          ctx.fillStyle = `${v.color}22`;
+          ctx.fillStyle = isStart ? "rgba(47, 168, 121, 0.2)" : isEnd ? "rgba(232, 99, 99, 0.2)" : `${v.color}22`;
           ctx.fill();
+
           ctx.beginPath();
           ctx.arc(v.x, v.y, 28, 0, Math.PI * 2);
-          ctx.strokeStyle = v.color;
-          ctx.lineWidth = isSelected ? 3 : 1.5;
+          ctx.strokeStyle = isStart ? "#2fa879" : isEnd ? "#e86363" : v.color;
+          ctx.lineWidth = isStart || isEnd || isSelected ? 3 : 1.5;
           ctx.stroke();
         }
 
         ctx.beginPath();
-        ctx.arc(v.x, v.y, 22, 0, Math.PI * 2);
+        ctx.arc(v.x, v.y, 20, 0, Math.PI * 2);
         ctx.fillStyle = v.color;
         ctx.shadowColor = v.color;
         ctx.shadowBlur = 10;
@@ -308,14 +379,18 @@ export default function SearchAndFind() {
         ctx.shadowBlur = 0;
 
         ctx.beginPath();
-        ctx.arc(v.x, v.y, 9, 0, Math.PI * 2);
+        ctx.arc(v.x, v.y, 8, 0, Math.PI * 2);
         ctx.fillStyle = "#ffffff";
         ctx.fill();
 
         ctx.fillStyle = "var(--ink, #182338)";
-        ctx.font = isSelected ? "bold 13px Manrope, sans-serif" : "600 11px Manrope, sans-serif";
+        ctx.font = isSelected || isStart || isEnd ? "bold 13px Manrope, sans-serif" : "600 11px Manrope, sans-serif";
         ctx.textAlign = "center";
-        ctx.fillText(v.name, v.x, v.y - 30);
+
+        let label = v.name;
+        if (isStart) label = "ORIGIN: " + v.name;
+        else if (isEnd) label = "DEST: " + v.name;
+        ctx.fillText(label, v.x, v.y - 28);
 
         ctx.fillStyle = "var(--muted, #7d899e)";
         ctx.font = "500 10px 'DM Sans', sans-serif";
@@ -346,8 +421,13 @@ export default function SearchAndFind() {
             match: `Upcoming Fixture at ${v.name}`,
             status: "Scheduled & Active",
             players: v.players,
-            capacity: "Open for Spectators",
+            capacity: v.capacity,
           });
+          if (canvasMode === "navigator") {
+            if (navStart !== v.name) {
+              setNavEnd(v.name);
+            }
+          }
           break;
         }
       }
@@ -359,7 +439,7 @@ export default function SearchAndFind() {
       cancelAnimationFrame(animationFrameId);
       canvas.removeEventListener("click", handleCanvasClick);
     };
-  }, [activeTab, selectedVenue, canvasMode]);
+  }, [activeTab, selectedVenue, canvasMode, navStart, navEnd]);
 
   // ----------------------------------------------------
   // Tab 3: Player Finder & Leaderboard Actions
@@ -411,12 +491,13 @@ export default function SearchAndFind() {
   async function generateSmartSchedule() {
     setScheduleLoading(true);
     const candidateMatches = [
-      { name: "100m Athletics Final", start: 9, end: 10, venue: "Track Field", category: "Athletics" },
-      { name: "Badminton Quarter-Final", start: 10, end: 11, venue: "Indoor Court 1", category: "Racket" },
-      { name: "Table Tennis Singles", start: 10, end: 12, venue: "Indoor Court 2", category: "Indoor" },
-      { name: "Football Championship Final", start: 11, end: 13, venue: "Arena Main Stadium", category: "Team" },
-      { name: "Basketball Semi-Final", start: 13, end: 15, venue: "Indoor Court 2", category: "Team" },
-      { name: "Medal Ceremony & Trophies", start: 15, end: 16, venue: "Podium of Champions", category: "Awards" },
+      { name: "100m Athletics Final", start: 9, end: 10, venue: "Athletics Track", category: "Athletics" },
+      { name: "Badminton Quarter-Final", start: 10, end: 11, venue: "Badminton Court", category: "Racket" },
+      { name: "Basketball Semi-Final", start: 10, end: 12, venue: "Basketball Court", category: "Team" },
+      { name: "Cricket Championship Final", start: 11, end: 13, venue: "Cricket Ground", category: "Team" },
+      { name: "Volleyball Tournament Semi", start: 13, end: 15, venue: "Volleyball Court", category: "Team" },
+      { name: "Tennis Singles Decider", start: 14, end: 16, venue: "Tennis Court", category: "Racket" },
+      { name: "Multi-Sport Championship Grand Final", start: 16, end: 18, venue: "Indoor Sports Complex", category: "Finals" },
     ];
 
     try {
@@ -836,10 +917,10 @@ export default function SearchAndFind() {
               <div className="canvas-overlay">
                 <div className="canvas-badge">
                   <span className="live-pulse" />
-                  <span>Interactive Flow: Click Venues to Inspect</span>
+                  <span>Interactive Flow: Click Venues to Inspect & Navigate</span>
                 </div>
                 <div className="canvas-badge" style={{ background: "rgba(89,111,224,0.85)" }}>
-                  <Compass size={14} /> 5 Active Grounds
+                  <Compass size={14} /> 7 Active Grounds
                 </div>
               </div>
 
@@ -848,6 +929,13 @@ export default function SearchAndFind() {
                 <span style={{ fontSize: 11, fontWeight: 700, color: "var(--muted)", marginRight: 6 }}>
                   FLOW VIEWS:
                 </span>
+                <button
+                  className={"button " + (canvasMode === "navigator" ? "primary-button" : "secondary-button")}
+                  style={{ fontSize: 11, minHeight: 30 }}
+                  onClick={() => setCanvasMode("navigator")}
+                >
+                  <Navigation size={12} /> Campus Navigator (BFS)
+                </button>
                 <button
                   className={"button " + (canvasMode === "normal" ? "primary-button" : "secondary-button")}
                   style={{ fontSize: 11, minHeight: 30 }}
@@ -869,6 +957,126 @@ export default function SearchAndFind() {
                 >
                   <Sparkles size={12} /> Pulse All Active Match Grounds
                 </button>
+              </div>
+            </div>
+
+            {/* Campus Navigator Controls */}
+            <div
+              style={{
+                marginTop: 16,
+                padding: 16,
+                background: "var(--surface-2)",
+                border: "1px solid var(--line)",
+                borderRadius: 12,
+                display: "grid",
+                gap: 14,
+              }}
+            >
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 8 }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                  <Navigation size={18} color="var(--blue)" />
+                  <b style={{ font: "800 15px Manrope" }}>CAMPUS GAME FLOW NAVIGATOR (BFS)</b>
+                </div>
+                <Tag tone="blue">
+                  {currentBfsRoute.length > 0 ? `${currentBfsRoute.length - 1} Hops · Shortest Path` : "Route Found"}
+                </Tag>
+              </div>
+
+              <div style={{ display: "flex", flexWrap: "wrap", alignItems: "center", gap: 12 }}>
+                <div style={{ flex: "1 1 200px" }}>
+                  <label style={{ fontSize: 11, fontWeight: 700, color: "var(--muted)", display: "block", marginBottom: 4 }}>
+                    ORIGIN VENUE
+                  </label>
+                  <select
+                    value={navStart}
+                    onChange={(e) => setNavStart(e.target.value)}
+                    style={{ width: "100%", padding: "8px 12px", borderRadius: 8 }}
+                  >
+                    {CAMPUS_VENUES.map((v) => (
+                      <option key={v.id} value={v.name}>{v.name}</option>
+                    ))}
+                  </select>
+                </div>
+
+                <button
+                  className="icon-button"
+                  title="Swap Origin and Destination"
+                  style={{ marginTop: 18 }}
+                  onClick={() => {
+                    const temp = navStart;
+                    setNavStart(navEnd);
+                    setNavEnd(temp);
+                  }}
+                >
+                  <ArrowLeftRight size={16} />
+                </button>
+
+                <div style={{ flex: "1 1 200px" }}>
+                  <label style={{ fontSize: 11, fontWeight: 700, color: "var(--muted)", display: "block", marginBottom: 4 }}>
+                    DESTINATION VENUE
+                  </label>
+                  <select
+                    value={navEnd}
+                    onChange={(e) => setNavEnd(e.target.value)}
+                    style={{ width: "100%", padding: "8px 12px", borderRadius: 8 }}
+                  >
+                    {CAMPUS_VENUES.map((v) => (
+                      <option key={v.id} value={v.name}>{v.name}</option>
+                    ))}
+                  </select>
+                </div>
+
+                <div style={{ flex: "1 1 140px", marginTop: 18 }}>
+                  <button
+                    className="button primary-button"
+                    style={{ width: "100%", minHeight: 38, fontSize: 12 }}
+                    onClick={() => setCanvasMode("navigator")}
+                  >
+                    <Navigation size={14} /> Navigate on Map
+                  </button>
+                </div>
+              </div>
+
+              {/* Route Breadcrumb Path Display */}
+              <div
+                style={{
+                  padding: "10px 14px",
+                  background: "var(--surface)",
+                  borderRadius: 8,
+                  border: "1px solid var(--line)",
+                  display: "flex",
+                  alignItems: "center",
+                  flexWrap: "wrap",
+                  gap: 8,
+                }}
+              >
+                <span style={{ fontSize: 11, fontWeight: 700, color: "var(--blue)" }}>BFS SHORTEST ROUTE:</span>
+                {currentBfsRoute.map((idx, i) => {
+                  const v = CAMPUS_VENUES[idx];
+                  const isFirst = i === 0;
+                  const isLast = i === currentBfsRoute.length - 1;
+                  return (
+                    <span key={v.id} style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
+                      <span
+                        style={{
+                          padding: "3px 8px",
+                          borderRadius: 6,
+                          fontSize: 12,
+                          fontWeight: isFirst || isLast ? 800 : 500,
+                          background: isFirst ? "rgba(47, 168, 121, 0.15)" : isLast ? "rgba(232, 99, 99, 0.15)" : "var(--surface-2)",
+                          color: isFirst ? "var(--green)" : isLast ? "var(--red)" : "var(--ink)",
+                          border: isFirst ? "1px solid var(--green)" : isLast ? "1px solid var(--red)" : "1px solid var(--line)",
+                        }}
+                      >
+                        {v.name}
+                      </span>
+                      {i < currentBfsRoute.length - 1 && <ArrowRight size={13} color="var(--muted)" />}
+                    </span>
+                  );
+                })}
+                <span style={{ marginLeft: "auto", fontSize: 11, color: "var(--muted)" }}>
+                  Walking estimate: ~{Math.max(1, (currentBfsRoute.length - 1) * 3)} mins
+                </span>
               </div>
             </div>
 
@@ -1204,7 +1412,7 @@ export default function SearchAndFind() {
             }
           />
           <p className="muted-copy" style={{ marginBottom: 18 }}>
-            Ensures that sports matches across campus venues (Track & Field, Indoor Court 1, Indoor Court 2, Arena Stadium) run seamlessly without overlapping court bookings or double-booked student athletes.
+            Ensures that sports matches across campus venues (Cricket Ground, Basketball Court, Volleyball Court, Badminton Court, Indoor Sports Complex, Tennis Court, Athletics Track) run seamlessly without overlapping court bookings or double-booked student athletes.
           </p>
 
           {scheduleSummary && (
@@ -1225,11 +1433,11 @@ export default function SearchAndFind() {
 
           <div style={{ display: "grid", gap: 12 }}>
             {(plannedSchedule.length > 0 ? plannedSchedule : [
-              { name: "100m Athletics Final", start: 9, end: 10, venue: "Track Field", category: "Athletics" },
-              { name: "Badminton Quarter-Final", start: 10, end: 11, venue: "Indoor Court 1", category: "Racket" },
-              { name: "Table Tennis Singles", start: 11, end: 12, venue: "Indoor Court 2", category: "Indoor" },
-              { name: "Football Championship Final", start: 13, end: 15, venue: "Arena Main Stadium", category: "Team" },
-              { name: "Medal Ceremony & Trophies", start: 15, end: 16, venue: "Podium of Champions", category: "Awards" },
+              { name: "100m Athletics Final", start: 9, end: 10, venue: "Athletics Track", category: "Athletics" },
+              { name: "Badminton Quarter-Final", start: 10, end: 11, venue: "Badminton Court", category: "Racket" },
+              { name: "Basketball Semi-Final", start: 11, end: 12, venue: "Basketball Court", category: "Team" },
+              { name: "Cricket Championship Final", start: 13, end: 15, venue: "Cricket Ground", category: "Team" },
+              { name: "Multi-Sport Grand Finals", start: 16, end: 18, venue: "Indoor Sports Complex", category: "Finals" },
             ]).map((match: any, idx: number) => (
               <div
                 key={idx}

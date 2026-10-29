@@ -20,11 +20,27 @@ type Demo = {
   graph: { bfs: string[]; dfs: string[] };
 };
 
-const venueNames = ["Main Hall", "Room A", "Court A", "Activity Room"];
+const venueNames = [
+  "Cricket Ground",
+  "Basketball Court",
+  "Volleyball Court",
+  "Badminton Court",
+  "Indoor Sports Complex",
+  "Tennis Court",
+  "Athletics Track",
+];
 const venueConnections: [string, string][] = [
-  ["Main Hall", "Room A"], ["Main Hall", "Court A"],
-  ["Main Hall", "Activity Room"], ["Room A", "Court A"],
-  ["Court A", "Activity Room"],
+  ["Indoor Sports Complex", "Cricket Ground"],
+  ["Indoor Sports Complex", "Athletics Track"],
+  ["Indoor Sports Complex", "Basketball Court"],
+  ["Indoor Sports Complex", "Volleyball Court"],
+  ["Indoor Sports Complex", "Badminton Court"],
+  ["Indoor Sports Complex", "Tennis Court"],
+  ["Cricket Ground", "Athletics Track"],
+  ["Basketball Court", "Volleyball Court"],
+  ["Volleyball Court", "Badminton Court"],
+  ["Badminton Court", "Tennis Court"],
+  ["Athletics Track", "Tennis Court"],
 ];
 
 function findVenueRoutes(start: string, end: string) {
@@ -60,8 +76,8 @@ export default function Structures() {
   const [queue, setQueue] = useState<string[]>([]);
   const [checkInName, setCheckInName] = useState("");
   const [message, setMessage] = useState("");
-  const [venueStart, setVenueStart] = useState("Main Hall");
-  const [venueEnd, setVenueEnd] = useState("Activity Room");
+  const [venueStart, setVenueStart] = useState("Indoor Sports Complex");
+  const [venueEnd, setVenueEnd] = useState("Cricket Ground");
   const venueRoutes = findVenueRoutes(venueStart, venueEnd);
 
   useEffect(() => {
@@ -260,12 +276,30 @@ export default function Structures() {
       <Card className="tools-card">
         <div className="tools-note inline"><Info size={18} /><span>This is a sample venue layout for planning movement. Scheduled game locations are shown on the Tournaments & games page.</span></div>
         <div className="venue-demo-layout">
-          <div className="graph-map" aria-label="Sample venue map">
-            <div className="graph-edge edge-one" /><div className="graph-edge edge-two" /><div className="graph-edge edge-three" /><div className="graph-edge edge-four" /><div className="graph-edge edge-five" />
-            <span className={"graph-vertex v-hub " + (venueStart === "Main Hall" ? "is-start" : "") + (venueEnd === "Main Hall" ? "is-end" : "")}>Main Hall</span>
-            <span className={"graph-vertex v-chess " + (venueStart === "Room A" ? "is-start" : "") + (venueEnd === "Room A" ? "is-end" : "")}>Room A</span>
-            <span className={"graph-vertex v-court " + (venueStart === "Court A" ? "is-start" : "") + (venueEnd === "Court A" ? "is-end" : "")}>Court A</span>
-            <span className={"graph-vertex v-table " + (venueStart === "Activity Room" ? "is-start" : "") + (venueEnd === "Activity Room" ? "is-end" : "")}>Activity Room</span>
+          <div className="graph-map" aria-label="Sample venue map" style={{ display: "flex", flexWrap: "wrap", gap: 10, justifyContent: "center", alignItems: "center", minHeight: 180, padding: 16 }}>
+            {venueNames.map((v) => {
+              const isStart = venueStart === v;
+              const isEnd = venueEnd === v;
+              const onShortest = venueRoutes[0]?.includes(v);
+              return (
+                <span
+                  key={v}
+                  className={"graph-vertex " + (isStart ? "is-start " : "") + (isEnd ? "is-end" : "")}
+                  style={{
+                    position: "static",
+                    cursor: "pointer",
+                    boxShadow: onShortest ? "0 0 12px rgba(89, 111, 224, 0.4)" : undefined,
+                    borderColor: isStart ? "var(--green)" : isEnd ? "var(--red)" : onShortest ? "var(--blue)" : undefined,
+                  }}
+                  onClick={() => {
+                    if (venueStart === v) return;
+                    setVenueEnd(v);
+                  }}
+                >
+                  {v}
+                </span>
+              );
+            })}
           </div>
           <div className="venue-map-legend"><span><i className="legend-start" /> Starting place</span><span><i className="legend-end" /> Destination</span></div>
           <div className="venue-route-controls">

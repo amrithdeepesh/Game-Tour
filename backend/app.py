@@ -65,6 +65,17 @@ def _allowed_frontend_origin(origin):
         return False
 
 
+ALLOWED_VENUES = (
+    "Cricket Ground",
+    "Basketball Court",
+    "Volleyball Court",
+    "Badminton Court",
+    "Indoor Sports Complex",
+    "Tennis Court",
+    "Athletics Track",
+)
+
+
 _LOGIN_FAILURES = {}
 _LOGIN_LOCK = threading.Lock()
 
@@ -177,13 +188,19 @@ def phase_demo():
     for match in ("Next match check-in", "Following match check-in"):
         check_in_queue.enqueue(match)
 
-    venues = Graph(("Main Hall", "Room A", "Court A", "Activity Room"))
+    venues = Graph(ALLOWED_VENUES)
     for first, second in (
-        ("Main Hall", "Room A"),
-        ("Main Hall", "Court A"),
-        ("Main Hall", "Activity Room"),
-        ("Room A", "Court A"),
-        ("Court A", "Activity Room"),
+        ("Indoor Sports Complex", "Cricket Ground"),
+        ("Indoor Sports Complex", "Athletics Track"),
+        ("Indoor Sports Complex", "Basketball Court"),
+        ("Indoor Sports Complex", "Volleyball Court"),
+        ("Indoor Sports Complex", "Badminton Court"),
+        ("Indoor Sports Complex", "Tennis Court"),
+        ("Cricket Ground", "Athletics Track"),
+        ("Basketball Court", "Volleyball Court"),
+        ("Volleyball Court", "Badminton Court"),
+        ("Badminton Court", "Tennis Court"),
+        ("Athletics Track", "Tennis Court"),
     ):
         venues.add_edge(first, second)
 
@@ -201,7 +218,7 @@ def phase_demo():
             "searchValue": values[-1],
             "searchFound": tree.contains(values[-1]),
         },
-        "graph": {"bfs": venues.bfs("Main Hall"), "dfs": venues.dfs("Main Hall")},
+        "graph": {"bfs": venues.bfs("Indoor Sports Complex"), "dfs": venues.dfs("Indoor Sports Complex")},
         "greedySchedule": schedule_maximum_matches(intervals),
     }
 
@@ -323,9 +340,17 @@ class Handler(BaseHTTPRequestHandler):
                 database.update_tournament(int(path.rsplit("/", 1)[1]), data)
                 return self.send_json({"saved": True})
             if path.startswith("/api/games/"):
+                if "venue" in data:
+                    venue = str(data.get("venue", "")).strip()
+                    if venue not in ALLOWED_VENUES:
+                        raise ValueError(f"Location must be one of: {', '.join(ALLOWED_VENUES)}.")
                 database.update_game(int(path.rsplit("/", 1)[1]), data)
                 return self.send_json({"saved": True})
             if path.startswith("/api/matches/"):
+                if "venue" in data:
+                    venue = str(data.get("venue", "")).strip()
+                    if venue and venue not in ALLOWED_VENUES:
+                        raise ValueError(f"Location must be one of: {', '.join(ALLOWED_VENUES)}.")
                 match_id = int(path.rsplit("/", 1)[1])
                 database.update_match(match_id, data)
                 return self.send_json({"saved": True})
@@ -350,7 +375,7 @@ class Handler(BaseHTTPRequestHandler):
                 self.need("admin")
                 database.delete_game(int(path.rsplit("/", 1)[1]))
                 return self.send_json({"deleted": True})
-            if path.startswith("/api/participants/"):
+            if path.startswith("/api/participants/") or path.startswith("/api/students/"):
                 self.need("admin")
                 database.delete_participant(int(path.rsplit("/", 1)[1]))
                 return self.send_json({"deleted": True})
@@ -401,6 +426,12 @@ class Handler(BaseHTTPRequestHandler):
                         )
                     ],
                 )
+            if path == "/api/factions":
+                return self.send_json({"factions": database.factions()})
+            if path == "/api/demo":
+                return self.send_json(phase_demo())
+            if path == "/api/ds-lab/benchmark":
+                return self.send_json(benchmark_search_sort())
             u = self.need()
             if path == "/api/dashboard":
                 gs = database.games()
@@ -444,8 +475,6 @@ class Handler(BaseHTTPRequestHandler):
                 return self.send_json({"games": database.games()})
             if path == "/api/tournaments":
                 return self.send_json({"tournaments": database.tournaments()})
-            if path == "/api/factions":
-                return self.send_json({"factions": database.factions()})
             if path == "/api/waiting-list":
                 gid = params.get("game_id", [None])[0]
                 uid = params.get("user_id", [None])[0]
@@ -508,10 +537,6 @@ class Handler(BaseHTTPRequestHandler):
                         )
                     }
                 )
-            if path == "/api/demo":
-                return self.send_json(phase_demo())
-            if path == "/api/ds-lab/benchmark":
-                return self.send_json(benchmark_search_sort())
             return self.send_json({"error": "Not found"}, 404)
         except Exception as e:
             return self.error(e)
@@ -539,8 +564,14 @@ class Handler(BaseHTTPRequestHandler):
                     raise ValueError(
                         "Name and faction are required and must fit the allowed length."
                     )
-                if not 12 <= len(pw) <= 128:
-                    raise ValueError("Use a password between 12 and 128 characters.")
+                valid_factions = {f["name"].strip().lower(): f["name"] for f in database.factions()}
+                if not valid_factions:
+                    raise ValueError("No active factions are configured by the administrator.")
+                if faction.lower() not in valid_factions:
+                    raise ValueError(f"Please select a valid faction managed by the administrator.")
+                faction = valid_factions[faction.lower()]
+                if not 8 <= len(pw) <= 128:
+                    raise ValueError("Use a password between 8 and 128 characters.")
                 database.create_user(
                     {
                         "username": username,
@@ -649,6 +680,9 @@ class Handler(BaseHTTPRequestHandler):
 
             if path == "/api/matches":
                 self.need("admin")
+                venue = str(data.get("venue", "")).strip()
+                if venue and venue not in ALLOWED_VENUES:
+                    raise ValueError(f"Location must be one of: {', '.join(ALLOWED_VENUES)}.")
                 mid = database.create_match(data)
                 return self.send_json({"id": mid, "created": True}, 201)
 
@@ -676,9 +710,15 @@ class Handler(BaseHTTPRequestHandler):
                     raise ValueError(
                         "Name and faction are required and must fit the allowed length."
                     )
-                if not 12 <= len(password) <= 128:
+                valid_factions = {f["name"].strip().lower(): f["name"] for f in database.factions()}
+                if not valid_factions:
+                    raise ValueError("No active factions are configured by the administrator.")
+                if faction.lower() not in valid_factions:
+                    raise ValueError(f"Please select a valid faction managed by the administrator.")
+                faction = valid_factions[faction.lower()]
+                if not 8 <= len(password) <= 128:
                     raise ValueError(
-                        "Use a starter password between 12 and 128 characters."
+                        "Use a starter password between 8 and 128 characters."
                     )
                 participant_id = database.create_user(
                     {
@@ -702,6 +742,9 @@ class Handler(BaseHTTPRequestHandler):
                 for k in ("name", "tournament_id", "starts_at", "venue", "capacity"):
                     if not data.get(k):
                         raise ValueError(f"{k.replace('_',' ').title()} is required.")
+                venue = str(data.get("venue", "")).strip()
+                if venue not in ALLOWED_VENUES:
+                    raise ValueError(f"Location must be one of: {', '.join(ALLOWED_VENUES)}.")
                 if int(data["capacity"]) < 1 or int(data.get("rounds", 1)) < 1:
                     raise ValueError("Capacity and rounds must be at least one.")
                 return self.send_json({"id": database.create_game(data)}, 201)
@@ -870,22 +913,19 @@ class Handler(BaseHTTPRequestHandler):
                 return self.send_json(res)
 
             if path == "/api/ds-lab/phase2/graph":
-                campus_venues = (
-                    "Track Field",
-                    "Indoor Court 1",
-                    "Indoor Court 2",
-                    "Activity Hall",
-                    "Outdoor Court",
-                    "Main Stadium",
-                )
+                campus_venues = list(ALLOWED_VENUES)
                 campus_edges = [
-                    ("Track Field", "Indoor Court 1"),
-                    ("Track Field", "Outdoor Court"),
-                    ("Indoor Court 1", "Indoor Court 2"),
-                    ("Indoor Court 1", "Activity Hall"),
-                    ("Outdoor Court", "Main Stadium"),
-                    ("Activity Hall", "Main Stadium"),
-                    ("Indoor Court 2", "Activity Hall"),
+                    ("Indoor Sports Complex", "Cricket Ground"),
+                    ("Indoor Sports Complex", "Athletics Track"),
+                    ("Indoor Sports Complex", "Basketball Court"),
+                    ("Indoor Sports Complex", "Volleyball Court"),
+                    ("Indoor Sports Complex", "Badminton Court"),
+                    ("Indoor Sports Complex", "Tennis Court"),
+                    ("Cricket Ground", "Athletics Track"),
+                    ("Basketball Court", "Volleyball Court"),
+                    ("Volleyball Court", "Badminton Court"),
+                    ("Badminton Court", "Tennis Court"),
+                    ("Athletics Track", "Tennis Court"),
                 ]
                 g = Graph(campus_venues)
                 for u_v, v_v in campus_edges:
@@ -895,7 +935,9 @@ class Handler(BaseHTTPRequestHandler):
                 for u_v, v_v in custom_edges:
                     g.add_edge(u_v, v_v)
 
-                start_venue = str(data.get("start", "Track Field"))
+                start_venue = str(data.get("start", "Indoor Sports Complex"))
+                if start_venue not in ALLOWED_VENUES:
+                    start_venue = "Indoor Sports Complex"
                 bfs_res = g.bfs_detailed(start_venue)
                 dfs_res = g.dfs_detailed(start_venue)
 
@@ -932,13 +974,14 @@ class Handler(BaseHTTPRequestHandler):
                 candidates = data.get("candidates", [])
                 if not candidates:
                     candidates = [
-                        {"id": 1, "name": "100m Sprint Heats", "venue": "Track Field", "start": 9.0, "end": 10.5, "participants": ["Aarav Nair", "Ishan Kapoor"], "capacity": 20, "priority": 3},
-                        {"id": 2, "name": "Badminton Singles R1", "venue": "Indoor Court 1", "start": 9.5, "end": 11.0, "participants": ["Diya Menon", "Meera Rao"], "capacity": 10, "priority": 2},
-                        {"id": 3, "name": "Table Tennis Semis", "venue": "Indoor Court 2", "start": 10.0, "end": 11.5, "participants": ["Rohan Shah", "Sana Khan"], "capacity": 8, "priority": 2},
-                        {"id": 4, "name": "Relay 4x100m", "venue": "Track Field", "start": 10.0, "end": 11.5, "participants": ["Aarav Nair", "Vivaan Iyer"], "capacity": 30, "priority": 1},
-                        {"id": 5, "name": "Chess Rapid Blitz", "venue": "Activity Hall", "start": 11.0, "end": 13.0, "participants": ["Zoya Pillai", "Ishan Kapoor"], "capacity": 16, "priority": 2},
-                        {"id": 6, "name": "Basketball 3x3 Showcase", "venue": "Outdoor Court", "start": 11.5, "end": 13.5, "participants": ["Vivaan Iyer", "Diya Menon"], "capacity": 25, "priority": 1},
-                        {"id": 7, "name": "Badminton Finals", "venue": "Indoor Court 1", "start": 11.0, "end": 12.5, "participants": ["Meera Rao"], "capacity": 12, "priority": 3},
+                        {"id": 1, "name": "100m Sprint Heats", "venue": "Athletics Track", "start": 9.0, "end": 10.5, "participants": ["Aarav Nair", "Ishan Kapoor"], "capacity": 20, "priority": 3},
+                        {"id": 2, "name": "Badminton Singles R1", "venue": "Badminton Court", "start": 9.5, "end": 11.0, "participants": ["Diya Menon", "Meera Rao"], "capacity": 10, "priority": 2},
+                        {"id": 3, "name": "Basketball 3x3 Showcase", "venue": "Basketball Court", "start": 10.0, "end": 11.5, "participants": ["Rohan Shah", "Sana Khan"], "capacity": 12, "priority": 2},
+                        {"id": 4, "name": "Relay 4x100m", "venue": "Athletics Track", "start": 10.0, "end": 11.5, "participants": ["Aarav Nair", "Vivaan Iyer"], "capacity": 30, "priority": 1},
+                        {"id": 5, "name": "Cricket Tournament Match", "venue": "Cricket Ground", "start": 11.0, "end": 13.0, "participants": ["Zoya Pillai", "Ishan Kapoor"], "capacity": 22, "priority": 2},
+                        {"id": 6, "name": "Volleyball Clash", "venue": "Volleyball Court", "start": 11.5, "end": 13.5, "participants": ["Vivaan Iyer", "Diya Menon"], "capacity": 25, "priority": 1},
+                        {"id": 7, "name": "Tennis Championship Finals", "venue": "Tennis Court", "start": 11.0, "end": 12.5, "participants": ["Meera Rao"], "capacity": 8, "priority": 3},
+                        {"id": 8, "name": "Multi-Sport Grand Final", "venue": "Indoor Sports Complex", "start": 14.0, "end": 16.0, "participants": ["Aarav Nair", "Rohan Shah"], "capacity": 50, "priority": 3},
                     ]
                 result = schedule_tournament_events(candidates)
                 return self.send_json(result)

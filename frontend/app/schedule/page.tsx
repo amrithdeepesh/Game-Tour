@@ -48,13 +48,14 @@ export default function SchedulingPage() {
 
   // Greedy solver state
   const [candidates, setCandidates] = useState<GreedyCandidate[]>([
-    { id: 1, name: "100m Sprint Heats", venue: "Track Field", start: 9.0, end: 10.5, participants: ["Aarav Nair", "Ishan Kapoor"], capacity: 20, priority: 3 },
-    { id: 2, name: "Badminton Singles R1", venue: "Indoor Court 1", start: 9.5, end: 11.0, participants: ["Diya Menon", "Meera Rao"], capacity: 10, priority: 2 },
-    { id: 3, name: "Table Tennis Semis", venue: "Indoor Court 2", start: 10.0, end: 11.5, participants: ["Rohan Shah", "Sana Khan"], capacity: 8, priority: 2 },
-    { id: 4, name: "Relay 4x100m Final", venue: "Track Field", start: 10.0, end: 11.5, participants: ["Aarav Nair", "Vivaan Iyer"], capacity: 30, priority: 1 },
-    { id: 5, name: "Chess Rapid Blitz", venue: "Activity Hall", start: 11.0, end: 13.0, participants: ["Zoya Pillai", "Ishan Kapoor"], capacity: 16, priority: 2 },
-    { id: 6, name: "Basketball 3x3 Showcase", venue: "Outdoor Court", start: 11.5, end: 13.5, participants: ["Vivaan Iyer", "Diya Menon"], capacity: 25, priority: 1 },
-    { id: 7, name: "Badminton Finals", venue: "Indoor Court 1", start: 11.0, end: 12.5, participants: ["Meera Rao"], capacity: 12, priority: 3 },
+    { id: 1, name: "100m Sprint Heats", venue: "Athletics Track", start: 9.0, end: 10.5, participants: ["Aarav Nair", "Ishan Kapoor"], capacity: 20, priority: 3 },
+    { id: 2, name: "Badminton Singles R1", venue: "Badminton Court", start: 9.5, end: 11.0, participants: ["Diya Menon", "Meera Rao"], capacity: 10, priority: 2 },
+    { id: 3, name: "Basketball 3x3 Showcase", venue: "Basketball Court", start: 10.0, end: 11.5, participants: ["Rohan Shah", "Sana Khan"], capacity: 12, priority: 2 },
+    { id: 4, name: "Relay 4x100m Final", venue: "Athletics Track", start: 10.0, end: 11.5, participants: ["Aarav Nair", "Vivaan Iyer"], capacity: 30, priority: 1 },
+    { id: 5, name: "Cricket Championship Match", venue: "Cricket Ground", start: 11.0, end: 13.0, participants: ["Zoya Pillai", "Ishan Kapoor"], capacity: 22, priority: 2 },
+    { id: 6, name: "Volleyball Clash", venue: "Volleyball Court", start: 11.5, end: 13.5, participants: ["Vivaan Iyer", "Diya Menon"], capacity: 25, priority: 1 },
+    { id: 7, name: "Tennis Singles Finals", venue: "Tennis Court", start: 11.0, end: 12.5, participants: ["Meera Rao"], capacity: 8, priority: 3 },
+    { id: 8, name: "Multi-Sport Grand Finals", venue: "Indoor Sports Complex", start: 14.0, end: 16.0, participants: ["Aarav Nair", "Rohan Shah"], capacity: 50, priority: 3 },
   ]);
 
   const [solverResult, setSolverResult] = useState<any>(null);

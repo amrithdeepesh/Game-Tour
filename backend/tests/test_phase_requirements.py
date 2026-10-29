@@ -171,7 +171,7 @@ class PhaseFourTests(unittest.TestCase):
         self.assertEqual(demo["queueFront"], "Next match check-in")
         self.assertEqual(demo["tree"]["inorder"], [20, 40, 60])
         self.assertTrue(demo["tree"]["searchFound"])
-        self.assertEqual(demo["graph"]["bfs"][0], "Main Hall")
+        self.assertEqual(demo["graph"]["bfs"][0], "Indoor Sports Complex")
         self.assertEqual(
             [row["name"] for row in demo["greedySchedule"]], ["Morning", "Afternoon"]
         )
